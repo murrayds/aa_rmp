@@ -20,13 +20,15 @@ AADATA_AS_CSV = osjoin(AA_PROCESSED_DIR, "aadata2016.csv")
 AADATA_CSV_WITH_PREFIX = osjoin(AA_PROCESSED_DIR, "aadata2016_prefixed.csv")
 AADATA_WITH_DISC = osjoin(AA_PROCESSED_DIR, "aadata2016_disc.csv")
 AADATA_WITH_DISC_RANK = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank.csv")
+AADATA_WITH_DISC_RANK_GENDER = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank_gender.csv")
+
 
 #####################
 # RAW DATA, RMP
 #####################
 RAW_RMP = osjoin(RAW_DIR, "rmp_professors.csv")
 RMP_CSV_WITH_PREFIX = osjoin(RMP_PROCESSED_DIR, "rmp2017_prefixed.csv")
-
+RMP_WITH_GENDER = osjoin(RMP_PROCESSED_DIR, "rmp2017_gender.csv")
 
 
 #####################
@@ -38,14 +40,15 @@ DISC_TAXONOMY_PREFIXED = osjoin(ADDITIONAL_DIR, "aa_taxonomy_custom_prefixed.csv
 
 FACULTY_RANKS = osjoin(ADDITIONAL_DIR, "FacultyProgression.csv")
 
+CUSTOM_GENDER = osjoin(ADDITIONAL_DIR, "Gender_Country.txt")
+CUSTOM_GENDER_FORMATTED = osjoin(ADDITIONAL_DIR, "Gender_Country_formatted.csv")
+
 
 rule all:
     input:
-        AADATA_CSV_WITH_PREFIX,
-        RMP_CSV_WITH_PREFIX,
         DISC_TAXONOMY_PREFIXED,
-        AADATA_WITH_DISC,
-        AADATA_WITH_DISC_RANK
+        AADATA_WITH_DISC_RANK_GENDER,
+        RMP_WITH_GENDER
 
 
 
@@ -83,3 +86,18 @@ rule add_rank_to_aadata:
     input: rules.add_disctax_to_aadata.output, FACULTY_RANKS
     output: AADATA_WITH_DISC_RANK
     shell: "Rscript scripts/add_relevant_faculty_rank.R {input} {output}"
+
+rule format_custom_gender_file:
+    input: CUSTOM_GENDER,
+    output: CUSTOM_GENDER_FORMATTED,
+    shell: "Rscript scripts/format_custom_gender_file.R {input} {output}"
+
+rule add_gender_to_aadata:
+    input: rules.add_rank_to_aadata.output, rules.format_custom_gender_file.output
+    output: AADATA_WITH_DISC_RANK_GENDER
+    shell: "Rscript scripts/add_gender_to_aadata.R {input} {output}"
+
+rule add_gender_to_rmp:
+    input: rules.add_prefix_to_rmp_columns.output, rules.format_custom_gender_file.output
+    output: RMP_WITH_GENDER
+    shell: "Rscript scripts/add_gender_to_rmpdata.R {input} {output}"
