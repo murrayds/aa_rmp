@@ -21,6 +21,7 @@ AADATA_CSV_WITH_PREFIX = osjoin(AA_PROCESSED_DIR, "aadata2016_prefixed.csv")
 AADATA_WITH_DISC = osjoin(AA_PROCESSED_DIR, "aadata2016_disc.csv")
 AADATA_WITH_DISC_RANK = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank.csv")
 AADATA_WITH_DISC_RANK_GENDER = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank_gender.csv")
+AADATA_WITH_DISC_RANK_GENDER_CAR = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank_gender_car.csv")
 
 
 #####################
@@ -43,10 +44,13 @@ FACULTY_RANKS = osjoin(ADDITIONAL_DIR, "FacultyProgression.csv")
 CUSTOM_GENDER = osjoin(ADDITIONAL_DIR, "Gender_Country.txt")
 CUSTOM_GENDER_FORMATTED = osjoin(ADDITIONAL_DIR, "Gender_Country_formatted.csv")
 
+
+CARNEGIE = osjoin(ADDITIONAL_DIR, "carnegie_classifications.xlsx")
+CARNEGIE_AA_CROSSWALK = osjoin(ADDITIONAL_DIR, "aainst_carnegie_crosswalk.csv")
+CARNEGIE_FORMATTED = osjoin(ADDITIONAL_DIR, "carnegie_classifications_formatted.csv")
+
 VANDERBILT_DATA = osjoin(ADDITIONAL_DIR, "vanderbilt.csv")
 VANDERBILT_VALIDATION_DATA = osjoin(VALIDATION_DIR, "vanderbilt_validation.csv")
-
-
 
 
 rule all:
@@ -54,7 +58,8 @@ rule all:
         DISC_TAXONOMY_PREFIXED,
         AADATA_WITH_DISC_RANK_GENDER,
         RMP_WITH_GENDER,
-        VANDERBILT_VALIDATION_DATA
+        VANDERBILT_VALIDATION_DATA,
+        AADATA_WITH_DISC_RANK_GENDER_CAR
 
 
 
@@ -98,6 +103,11 @@ rule format_custom_gender_file:
     output: CUSTOM_GENDER_FORMATTED,
     shell: "Rscript scripts/format_custom_gender_file.R {input} {output}"
 
+rule format_carnegie_file:
+    input: CARNEGIE, CARNEGIE_AA_CROSSWALK
+    output: CARNEGIE_FORMATTED
+    shell: "Rscript scripts/format_carnegie_file.R {input} {output}"
+
 rule add_gender_to_aadata:
     input: rules.add_rank_to_aadata.output, rules.format_custom_gender_file.output
     output: AADATA_WITH_DISC_RANK_GENDER
@@ -107,6 +117,11 @@ rule add_gender_to_rmp:
     input: rules.add_prefix_to_rmp_columns.output, rules.format_custom_gender_file.output
     output: RMP_WITH_GENDER
     shell: "Rscript scripts/add_gender_to_rmpdata.R {input} {output}"
+
+rule add_carnegie_classifications_to_aadata:
+    input: rules.add_gender_to_aadata.output, rules.format_carnegie_file.output
+    output: AADATA_WITH_DISC_RANK_GENDER_CAR
+    shell: "Rscript scripts/add_carnegie_to_aadata.R {input} {output}"
 
 rule assign_custom_gender_to_vanderbilt:
     input: VANDERBILT_DATA, rules.format_custom_gender_file.output
