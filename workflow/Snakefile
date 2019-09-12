@@ -1,0 +1,27 @@
+from os.path import join as osjoin
+import pandas as pd
+
+# store the local path to the dropbox folder in the 'PROJ_HOME_DIR' file.
+PROJ_HOME = open('PROJ_HOME_DIR').read().strip()
+DATA_DIR = osjoin(PROJ_HOME, 'Data')
+RAW_DIR = osjoin(DATA_DIR, 'Raw')
+ADDITIONAL_DIR = osjoin(DATA_DIR, 'Additional_data')
+DERIVED_DIR = osjoin(DATA_DIR, 'Derived')
+PROCESSED_DIR = osjoin(DERIVED_DIR, 'Processed')
+
+#####################
+# RAW DATA INPUTS
+#####################
+RAW_AADATA_EXCEL = osjoin(RAW_DIR, "AAD2016.01.814.xlsx")
+AADATA_AS_CSV = osjoin(PROCESSED_DIR, "aadata2016.csv")
+
+
+rule all:
+    input:
+        AADATA_AS_CSV
+
+
+rule convert_aadata_excel_to_csv:
+    input: RAW_AADATA_EXCEL,
+    output: AADATA_AS_CSV,
+    shell: "Rscript scripts/excel_to_csv.R {input} {output}"
