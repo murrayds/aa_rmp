@@ -10,7 +10,7 @@ DERIVED_DIR = osjoin(DATA_DIR, 'Derived')
 PROCESSED_DIR = osjoin(DERIVED_DIR, 'Processed')
 AA_PROCESSED_DIR = osjoin(PROCESSED_DIR, 'AA')
 RMP_PROCESSED_DIR = osjoin(PROCESSED_DIR, 'RMP')
-
+VALIDATION_DIR = osjoin(DERIVED_DIR, "Validation")
 
 #####################
 # RAW DATA, AA
@@ -43,12 +43,18 @@ FACULTY_RANKS = osjoin(ADDITIONAL_DIR, "FacultyProgression.csv")
 CUSTOM_GENDER = osjoin(ADDITIONAL_DIR, "Gender_Country.txt")
 CUSTOM_GENDER_FORMATTED = osjoin(ADDITIONAL_DIR, "Gender_Country_formatted.csv")
 
+VANDERBILT_DATA = osjoin(ADDITIONAL_DIR, "vanderbilt.csv")
+VANDERBILT_VALIDATION_DATA = osjoin(VALIDATION_DIR, "vanderbilt_validation.csv")
+
+
+
 
 rule all:
     input:
         DISC_TAXONOMY_PREFIXED,
         AADATA_WITH_DISC_RANK_GENDER,
-        RMP_WITH_GENDER
+        RMP_WITH_GENDER,
+        VANDERBILT_VALIDATION_DATA
 
 
 
@@ -101,3 +107,8 @@ rule add_gender_to_rmp:
     input: rules.add_prefix_to_rmp_columns.output, rules.format_custom_gender_file.output
     output: RMP_WITH_GENDER
     shell: "Rscript scripts/add_gender_to_rmpdata.R {input} {output}"
+
+rule assign_custom_gender_to_vanderbilt:
+    input: VANDERBILT_DATA, rules.format_custom_gender_file.output
+    output: VANDERBILT_VALIDATION_DATA
+    shell: "Rscript scripts/assign_gender_to_vanderbilt_data.R {input} {output}"
