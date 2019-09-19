@@ -23,6 +23,8 @@ AADATA_WITH_DISC_RANK = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank.csv")
 AADATA_WITH_DISC_RANK_GENDER = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank_gender.csv")
 AADATA_WITH_DISC_RANK_GENDER_CAR = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank_gender_car.csv")
 
+AADATA_ENRICHED = osjoin(AA_PROCESSED_DIR, "aadata2016_enriched.csv")
+AADATA_PROCESSED = osjoin(AA_PROCESSED_DIR, "aadata2016_processed.csv")
 
 #####################
 # RAW DATA, RMP
@@ -31,6 +33,10 @@ RAW_RMP = osjoin(RAW_DIR, "rmp_professors.csv")
 RMP_CSV_WITH_PREFIX = osjoin(RMP_PROCESSED_DIR, "rmp2017_prefixed.csv")
 RMP_WITH_GENDER = osjoin(RMP_PROCESSED_DIR, "rmp2017_gender.csv")
 
+RMP_COMMENTS = osjoin(RAW_DIR, "rmp_comments.csv")
+RMP_COMMENT_FEATURES = osjoin(RMP_PROCESSED_DIR, "rmp2017_comment_features.csv")
+
+RMP_ENRICHED = osjoin(RMP_PROCESSED_DIR, "rmp2017_enriched.csv")
 
 #####################
 # ADDITIONAL DATA, RMP
@@ -55,13 +61,9 @@ VANDERBILT_VALIDATION_DATA = osjoin(VALIDATION_DIR, "vanderbilt_validation.csv")
 
 rule all:
     input:
-        DISC_TAXONOMY_PREFIXED,
-        AADATA_WITH_DISC_RANK_GENDER,
-        RMP_WITH_GENDER,
         VANDERBILT_VALIDATION_DATA,
-        AADATA_WITH_DISC_RANK_GENDER_CAR
-
-
+        AADATA_ENRICHED,
+        RMP_ENRICHED
 
 rule convert_aadata_excel_to_csv:
     input: RAW_AADATA_EXCEL,
@@ -88,16 +90,6 @@ rule add_prefix_to_disctax_columns:
     output: DISC_TAXONOMY_PREFIXED
     shell: "Rscript scripts/apply_prefix_to_columns.R {input} \"OUR.\" {output}"
 
-rule add_disctax_to_aadata:
-    input: rules.add_prefix_to_aadata_columns.output, DISC_TAXONOMY_PREFIXED
-    output: AADATA_WITH_DISC
-    shell: "Rscript scripts/add_disciplinary_taxonomy.R {input} {output}"
-
-rule add_rank_to_aadata:
-    input: rules.add_disctax_to_aadata.output, FACULTY_RANKS
-    output: AADATA_WITH_DISC_RANK
-    shell: "Rscript scripts/add_relevant_faculty_rank.R {input} {output}"
-
 rule format_custom_gender_file:
     input: CUSTOM_GENDER,
     output: CUSTOM_GENDER_FORMATTED,
@@ -108,22 +100,33 @@ rule format_carnegie_file:
     output: CARNEGIE_FORMATTED
     shell: "Rscript scripts/format_carnegie_file.R {input} {output}"
 
-rule add_gender_to_aadata:
-    input: rules.add_rank_to_aadata.output, rules.format_custom_gender_file.output
-    output: AADATA_WITH_DISC_RANK_GENDER
-    shell: "Rscript scripts/add_gender_to_aadata.R {input} {output}"
+rule enrich_aadata:
+    input: rules.add_prefix_to_aadata_columns.output,
+           rules.add_prefix_to_disctax_columns.output,
+           rules.format_carnegie_file.output,
+           FACULTY_RANKS,
+           rules.format_custom_gender_file.output
+    output: AADATA_ENRICHED
+    shell: "Rscript scripts/enrich_aadata.R {input} {output}"
 
-rule add_gender_to_rmp:
-    input: rules.add_prefix_to_rmp_columns.output, rules.format_custom_gender_file.output
-    output: RMP_WITH_GENDER
-    shell: "Rscript scripts/add_gender_to_rmpdata.R {input} {output}"
-
-rule add_carnegie_classifications_to_aadata:
-    input: rules.add_gender_to_aadata.output, rules.format_carnegie_file.output
-    output: AADATA_WITH_DISC_RANK_GENDER_CAR
-    shell: "Rscript scripts/add_carnegie_to_aadata.R {input} {output}"
+rule process_enriched_aadata:
+    input: rules.enrich_aadata.output
+    output: AADATA_PROCESSED
+    shell: "Rscript scripts/process_enriched_aadata.R {input} {output}"
 
 rule assign_custom_gender_to_vanderbilt:
     input: VANDERBILT_DATA, rules.format_custom_gender_file.output
     output: VANDERBILT_VALIDATION_DATA
     shell: "Rscript scripts/assign_gender_to_vanderbilt_data.R {input} {output}"
+
+rule extract_features_from_comments:
+    input: RMP_COMMENTS
+    output: RMP_COMMENT_FEATURES
+    shell: "Rscript scripts/filter_rmp_comments_and_extract_features.R {input} {output}"
+
+rule enrich_rmpdata:
+    input: rules.add_prefix_to_rmp_columns.output,
+           rules.format_custom_gender_file.output,
+           rules.extract_features_from_comments.output           
+    output: RMP_ENRICHED
+    shell: "Rscript scripts/enrich_rmpdata.R {input} {output}"
