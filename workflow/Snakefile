@@ -69,15 +69,21 @@ CARNEGIE_FORMATTED = osjoin(ADDITIONAL_DIR, "carnegie_classifications_formatted.
 
 AA_RMP_INST_CROSSWALK = osjoin(ADDITIONAL_DIR, "aainst_rmpinst_crosswalk.csv")
 
+
+#####################
+# Validation DATA
+#####################
 VANDERBILT_DATA = osjoin(ADDITIONAL_DIR, "vanderbilt.csv")
 VANDERBILT_VALIDATION_DATA = osjoin(VALIDATION_DIR, "vanderbilt_validation.csv")
 
+RMP_NAME_GENDER_SUMMARY = osjoin(VALIDATION_DIR, "rmp_name_gender_summary.csv")
 
 rule all:
     input:
         VANDERBILT_VALIDATION_DATA,
         AARMP_FINAL,
-        TAG_DATA
+        TAG_DATA,
+        RMP_NAME_GENDER_SUMMARY
 
 rule convert_aadata_excel_to_csv:
     input: RAW_AADATA_EXCEL,
@@ -166,3 +172,8 @@ rule get_tag_data:
     input: rules.process_aarmp_data.output
     output: TAG_DATA
     shell: "Rscript scripts/get_tag_data.R {input} {output}"
+
+rule get_rmp_name_gender_summary:
+    input: rules.enrich_rmpdata.output
+    output: RMP_NAME_GENDER_SUMMARY
+    shell: "Rscript scripts/get_rmp_name_gender_summary.R {input} {output}"
