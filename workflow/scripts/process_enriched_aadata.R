@@ -4,6 +4,7 @@
 # of the perofrmance indicators and converting variables to reasonable alternatives
 # Author: Dakota Murray
 #
+library(dplyr)
 
 # Percentile threshold at which to classify someone as "excellent"
 EXCELLENCE_THRESHOLD <- 0.90

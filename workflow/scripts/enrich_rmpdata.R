@@ -32,6 +32,11 @@ rmpdata <- merge(rmpdata,
 
 rmpdata$OUR.Gender[is.na(rmpdata$OUR.Gender) | rmpdata$OUR.Gender == ""] <- "UNK"
 
+rmpdata$RMP.Chili <- plyr::mapvalues(rmpdata$RMP.Chili,
+                             c("['/assets/chilis/cold-chili.png']", "['/assets/chilis/new-hot-chili.png']"),
+                             c("cold", "hot"))
+
+
 # Load the data extracted from the comments
 commentdata <- read.csv(commentdata_path, stringsAsFactors=FALSE)
 

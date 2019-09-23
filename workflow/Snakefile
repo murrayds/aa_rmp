@@ -44,7 +44,10 @@ RMP_ENRICHED = osjoin(RMP_PROCESSED_DIR, "rmp2017_enriched.csv")
 # MATCHED DATA
 #####################
 AARMP_MATCHED = osjoin(AARMP_DIR, "aarmp_matched.csv")
+AARMP_PROCECCED = osjoin(AARMP_DIR, "aarmp_processed.csv")
+AARMP_FINAL = osjoin(AARMP_DIR, "aarmp_final.csv")
 
+#TAG_DATA <-
 #####################
 # ADDITIONAL DATA, RMP
 #####################
@@ -73,7 +76,7 @@ rule all:
         VANDERBILT_VALIDATION_DATA,
         AADATA_ENRICHED,
         RMP_ENRICHED,
-        AARMP_MATCHED
+        AARMP_FINAL
 
 rule convert_aadata_excel_to_csv:
     input: RAW_AADATA_EXCEL,
@@ -142,8 +145,18 @@ rule enrich_rmpdata:
     shell: "Rscript scripts/enrich_rmpdata.R {input} {output}"
 
 rule merge_aadata_rmpdata:
-    input: rules.enrich_aadata.output,
+    input: rules.process_enriched_aadata.output,
            rules.enrich_rmpdata.output,
            AA_RMP_INST_CROSSWALK
     output: AARMP_MATCHED
     shell: "Rscript scripts/merge_aadata_rmpdata.R {input} {output}"
+
+rule process_aarmp_data:
+    input: rules.merge_aadata_rmpdata.output
+    output: AARMP_PROCECCED
+    shell: "Rscript scripts/process_aarmp_data.R {input} {output}"
+
+rule get_final_aarmp:
+    input: rules.process_aarmp_data.output
+    output: AARMP_FINAL
+    shell: "Rscript scripts/get_final_aarmpdata.R {input} {output}"
