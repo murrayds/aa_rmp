@@ -1,13 +1,11 @@
 #!/usr/bin/env Rscript
 #
-# Add disciplinary taxonomy to aadata
+# Enrich the RMP data with custom gender assignment and with
+# information extracted from comments.
 # Author: Dakota Murray
 #
 library(stringr)
 library(dplyr)
-
-
-BEGIN_DATE <- "01/01/2012"
 
 
 args = commandArgs(trailingOnly=TRUE)

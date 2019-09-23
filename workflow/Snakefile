@@ -10,6 +10,7 @@ DERIVED_DIR = osjoin(DATA_DIR, 'Derived')
 PROCESSED_DIR = osjoin(DERIVED_DIR, 'Processed')
 AA_PROCESSED_DIR = osjoin(PROCESSED_DIR, 'AA')
 RMP_PROCESSED_DIR = osjoin(PROCESSED_DIR, 'RMP')
+AARMP_DIR = osjoin(PROCESSED_DIR, "AARMP")
 VALIDATION_DIR = osjoin(DERIVED_DIR, "Validation")
 
 #####################
@@ -38,6 +39,12 @@ RMP_COMMENT_FEATURES = osjoin(RMP_PROCESSED_DIR, "rmp2017_comment_features.csv")
 
 RMP_ENRICHED = osjoin(RMP_PROCESSED_DIR, "rmp2017_enriched.csv")
 
+
+#####################
+# MATCHED DATA
+#####################
+AARMP_MATCHED = osjoin(AARMP_DIR, "aarmp_matched.csv")
+
 #####################
 # ADDITIONAL DATA, RMP
 #####################
@@ -55,6 +62,8 @@ CARNEGIE = osjoin(ADDITIONAL_DIR, "carnegie_classifications.xlsx")
 CARNEGIE_AA_CROSSWALK = osjoin(ADDITIONAL_DIR, "aainst_carnegie_crosswalk.csv")
 CARNEGIE_FORMATTED = osjoin(ADDITIONAL_DIR, "carnegie_classifications_formatted.csv")
 
+AA_RMP_INST_CROSSWALK = osjoin(ADDITIONAL_DIR, "aainst_rmpinst_crosswalk.csv")
+
 VANDERBILT_DATA = osjoin(ADDITIONAL_DIR, "vanderbilt.csv")
 VANDERBILT_VALIDATION_DATA = osjoin(VALIDATION_DIR, "vanderbilt_validation.csv")
 
@@ -63,7 +72,8 @@ rule all:
     input:
         VANDERBILT_VALIDATION_DATA,
         AADATA_ENRICHED,
-        RMP_ENRICHED
+        RMP_ENRICHED,
+        AARMP_MATCHED
 
 rule convert_aadata_excel_to_csv:
     input: RAW_AADATA_EXCEL,
@@ -127,6 +137,13 @@ rule extract_features_from_comments:
 rule enrich_rmpdata:
     input: rules.add_prefix_to_rmp_columns.output,
            rules.format_custom_gender_file.output,
-           rules.extract_features_from_comments.output           
+           rules.extract_features_from_comments.output
     output: RMP_ENRICHED
     shell: "Rscript scripts/enrich_rmpdata.R {input} {output}"
+
+rule merge_aadata_rmpdata:
+    input: rules.enrich_aadata.output,
+           rules.enrich_rmpdata.output,
+           AA_RMP_INST_CROSSWALK
+    output: AARMP_MATCHED
+    shell: "Rscript scripts/merge_aadata_rmpdata.R {input} {output}"
