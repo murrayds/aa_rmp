@@ -1,0 +1,179 @@
+from os.path import join as osjoin
+import pandas as pd
+
+# store the local path to the dropbox folder in the 'PROJ_HOME_DIR' file.
+PROJ_HOME = open('PROJ_HOME_DIR').read().strip()
+DATA_DIR = osjoin(PROJ_HOME, 'Data')
+RAW_DIR = osjoin(DATA_DIR, 'Raw')
+ADDITIONAL_DIR = osjoin(DATA_DIR, 'Additional_data')
+DERIVED_DIR = osjoin(DATA_DIR, 'Derived')
+PROCESSED_DIR = osjoin(DERIVED_DIR, 'Processed')
+AA_PROCESSED_DIR = osjoin(PROCESSED_DIR, 'AA')
+RMP_PROCESSED_DIR = osjoin(PROCESSED_DIR, 'RMP')
+AARMP_DIR = osjoin(PROCESSED_DIR, "AARMP")
+VALIDATION_DIR = osjoin(DERIVED_DIR, "Validation")
+
+#####################
+# RAW DATA, AA
+#####################
+RAW_AADATA_EXCEL = osjoin(RAW_DIR, "AAD2016.01.814.xlsx")
+AADATA_AS_CSV = osjoin(AA_PROCESSED_DIR, "aadata2016.csv")
+AADATA_CSV_WITH_PREFIX = osjoin(AA_PROCESSED_DIR, "aadata2016_prefixed.csv")
+AADATA_WITH_DISC = osjoin(AA_PROCESSED_DIR, "aadata2016_disc.csv")
+AADATA_WITH_DISC_RANK = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank.csv")
+AADATA_WITH_DISC_RANK_GENDER = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank_gender.csv")
+AADATA_WITH_DISC_RANK_GENDER_CAR = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_rank_gender_car.csv")
+
+AADATA_ENRICHED = osjoin(AA_PROCESSED_DIR, "aadata2016_enriched.csv")
+AADATA_PROCESSED = osjoin(AA_PROCESSED_DIR, "aadata2016_processed.csv")
+
+#####################
+# RAW DATA, RMP
+#####################
+RAW_RMP = osjoin(RAW_DIR, "rmp_professors.csv")
+RMP_CSV_WITH_PREFIX = osjoin(RMP_PROCESSED_DIR, "rmp2017_prefixed.csv")
+RMP_WITH_GENDER = osjoin(RMP_PROCESSED_DIR, "rmp2017_gender.csv")
+
+RMP_COMMENTS = osjoin(RAW_DIR, "rmp_comments.csv")
+RMP_COMMENT_FEATURES = osjoin(RMP_PROCESSED_DIR, "rmp2017_comment_features.csv")
+
+RMP_ENRICHED = osjoin(RMP_PROCESSED_DIR, "rmp2017_enriched.csv")
+
+
+#####################
+# MATCHED DATA
+#####################
+AARMP_MATCHED = osjoin(AARMP_DIR, "aarmp_matched.csv")
+AARMP_PROCECCED = osjoin(AARMP_DIR, "aarmp_processed.csv")
+AARMP_FINAL = osjoin(AARMP_DIR, "aarmp_final.csv")
+
+TAG_DATA = osjoin(AARMP_DIR, "aarmp_tag_data.csv")
+
+
+#####################
+# ADDITIONAL DATA, RMP
+#####################
+DISC_TAXONOMY_EXCEL = osjoin(ADDITIONAL_DIR, "aa_taxonomy_custom.xlsx")
+DISC_TAXONOMY_CSV = osjoin(ADDITIONAL_DIR, "aa_taxonomy_custom.csv")
+DISC_TAXONOMY_PREFIXED = osjoin(ADDITIONAL_DIR, "aa_taxonomy_custom_prefixed.csv")
+
+FACULTY_RANKS = osjoin(ADDITIONAL_DIR, "FacultyProgression.csv")
+
+CUSTOM_GENDER = osjoin(ADDITIONAL_DIR, "Gender_Country.txt")
+CUSTOM_GENDER_FORMATTED = osjoin(ADDITIONAL_DIR, "Gender_Country_formatted.csv")
+
+
+CARNEGIE = osjoin(ADDITIONAL_DIR, "carnegie_classifications.xlsx")
+CARNEGIE_AA_CROSSWALK = osjoin(ADDITIONAL_DIR, "aainst_carnegie_crosswalk.csv")
+CARNEGIE_FORMATTED = osjoin(ADDITIONAL_DIR, "carnegie_classifications_formatted.csv")
+
+AA_RMP_INST_CROSSWALK = osjoin(ADDITIONAL_DIR, "aainst_rmpinst_crosswalk.csv")
+
+
+#####################
+# Validation DATA
+#####################
+VANDERBILT_DATA = osjoin(ADDITIONAL_DIR, "vanderbilt.csv")
+VANDERBILT_VALIDATION_DATA = osjoin(VALIDATION_DIR, "vanderbilt_validation.csv")
+
+RMP_NAME_GENDER_SUMMARY = osjoin(VALIDATION_DIR, "rmp_name_gender_summary.csv")
+
+rule all:
+    input:
+        VANDERBILT_VALIDATION_DATA,
+        AARMP_FINAL,
+        TAG_DATA,
+        RMP_NAME_GENDER_SUMMARY
+
+rule convert_aadata_excel_to_csv:
+    input: RAW_AADATA_EXCEL,
+    output: AADATA_AS_CSV,
+    shell: "Rscript scripts/excel_to_csv.R {input} {output}"
+
+rule convert_disctax_excel_to_csv:
+    input: DISC_TAXONOMY_EXCEL
+    output: DISC_TAXONOMY_CSV
+    shell: "Rscript scripts/excel_to_csv.R {input} {output}"
+
+rule add_prefix_to_aadata_columns:
+    input: rules.convert_aadata_excel_to_csv.output
+    output: AADATA_CSV_WITH_PREFIX
+    shell: "Rscript scripts/apply_prefix_to_columns.R {input} \"AA.\" {output}"
+
+rule add_prefix_to_rmp_columns:
+    input: RAW_RMP
+    output: RMP_CSV_WITH_PREFIX
+    shell: "Rscript scripts/apply_prefix_to_columns.R {input} \"RMP.\" {output}"
+
+rule add_prefix_to_disctax_columns:
+    input: rules.convert_disctax_excel_to_csv.output
+    output: DISC_TAXONOMY_PREFIXED
+    shell: "Rscript scripts/apply_prefix_to_columns.R {input} \"OUR.\" {output}"
+
+rule format_custom_gender_file:
+    input: CUSTOM_GENDER,
+    output: CUSTOM_GENDER_FORMATTED,
+    shell: "Rscript scripts/format_custom_gender_file.R {input} {output}"
+
+rule format_carnegie_file:
+    input: CARNEGIE, CARNEGIE_AA_CROSSWALK
+    output: CARNEGIE_FORMATTED
+    shell: "Rscript scripts/format_carnegie_file.R {input} {output}"
+
+rule enrich_aadata:
+    input: rules.add_prefix_to_aadata_columns.output,
+           rules.add_prefix_to_disctax_columns.output,
+           rules.format_carnegie_file.output,
+           FACULTY_RANKS,
+           rules.format_custom_gender_file.output
+    output: AADATA_ENRICHED
+    shell: "Rscript scripts/enrich_aadata.R {input} {output}"
+
+rule process_enriched_aadata:
+    input: rules.enrich_aadata.output
+    output: AADATA_PROCESSED
+    shell: "Rscript scripts/process_enriched_aadata.R {input} {output}"
+
+rule assign_custom_gender_to_vanderbilt:
+    input: VANDERBILT_DATA, rules.format_custom_gender_file.output
+    output: VANDERBILT_VALIDATION_DATA
+    shell: "Rscript scripts/assign_gender_to_vanderbilt_data.R {input} {output}"
+
+rule extract_features_from_comments:
+    input: RMP_COMMENTS
+    output: RMP_COMMENT_FEATURES
+    shell: "Rscript scripts/filter_rmp_comments_and_extract_features.R {input} {output}"
+
+rule enrich_rmpdata:
+    input: rules.add_prefix_to_rmp_columns.output,
+           rules.format_custom_gender_file.output,
+           rules.extract_features_from_comments.output
+    output: RMP_ENRICHED
+    shell: "Rscript scripts/enrich_rmpdata.R {input} {output}"
+
+rule merge_aadata_rmpdata:
+    input: rules.process_enriched_aadata.output,
+           rules.enrich_rmpdata.output,
+           AA_RMP_INST_CROSSWALK
+    output: AARMP_MATCHED
+    shell: "Rscript scripts/merge_aadata_rmpdata.R {input} {output}"
+
+rule process_aarmp_data:
+    input: rules.merge_aadata_rmpdata.output
+    output: AARMP_PROCECCED
+    shell: "Rscript scripts/process_aarmp_data.R {input} {output}"
+
+rule get_final_aarmp:
+    input: rules.process_aarmp_data.output
+    output: AARMP_FINAL
+    shell: "Rscript scripts/get_final_aarmpdata.R {input} {output}"
+
+rule get_tag_data:
+    input: rules.process_aarmp_data.output
+    output: TAG_DATA
+    shell: "Rscript scripts/get_tag_data.R {input} {output}"
+
+rule get_rmp_name_gender_summary:
+    input: rules.enrich_rmpdata.output
+    output: RMP_NAME_GENDER_SUMMARY
+    shell: "Rscript scripts/get_rmp_name_gender_summary.R {input} {output}"
