@@ -1,0 +1,381 @@
+---
+title: "AARMP: Analysis"
+author: "Dakota Murray"
+output: html_notebook
+---
+
+# Load necessary packages and data
+```{r}
+library(tidyverse)
+
+# Load the data
+ready_data <- readr::read_csv("~/Desktop/AARMP_2017/processed_files/aarmp_ready_data.csv", 
+    col_types = cols(X1 = col_skip()))
+
+# to make sure it loaded correctly, print the dimensions
+dim(ready_data)
+```
+
+
+Perform data processing. 
+```{r}
+# Filter to include only those for whom a gender could be identified
+ready_data <- ready_data[ready_data$gender %in% c("M", "F"), ]
+
+# Remove NA values...
+ready_data <- na.omit(ready_data)
+dim(ready_data)
+```
+
+```{r}
+p_point <- ready_data %>%
+  ggplot(aes(y = norm_all_pubcount, x = overall)) +
+  geom_point() +
+  facet_wrap(~discipline) +
+  #geom_smooth(method = "loess", color = "blue") +
+  geom_smooth(method = "lm", color = "red") +
+  theme_minimal()
+
+p_point
+```
+
+
+```{r}
+p_box <- ready_data %>%
+  mutate(all_output = factor(all_output, levels = c("None", "Moderate", "High"))) %>%
+  ggplot(aes(x = all_output, y = overall)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.02, width = 0.2) +
+  theme_minimal() +
+  facet_wrap(~discipline)
+
+p_box
+```
+
+We can attmept to dive deeper by looking at the overall teaching quality of only those with output, consdiering them by percentile bins
+```{r}
+
+
+long_data <- ready_data %>%
+  gather(metric, value, norm_citations, norm_all_pubcount, norm_grantcount, norm_awardcount) %>%
+  mutate(
+    metric = factor(metric, labels = c("Publications", "Awards", "Citations", "Grants"))
+  ) 
+
+no_count <- long_data %>%
+  filter(value == 0) %>%
+  group_by(metric) %>%
+  summarize(
+    med = median(overall)
+  )
+
+long_data %>%
+  filter(value > 0) %>%
+  group_by(metric) %>%
+  mutate(decile_rank = ntile(value, 10)) %>%
+  select(overall, metric, value, decile_rank, discipline) %>%
+  ggplot(aes(x = as.factor(decile_rank), y = overall)) +
+    geom_boxplot() +
+    stat_summary(fun.y=median, geom="line", aes(group=1), color = "red")  +
+    stat_summary(fun.y=median, geom="point", aes(group=1), color = "red")  + 
+    facet_grid(~metric) +
+    geom_hline(data = no_count, aes(yintercept = med), color = "black", alpha = 0.6, size = 1) +
+    theme_minimal() +
+    labs(x = "Decile ranks",
+         y = "Overall Teaching Quality")
+
+ggsave("~/Desktop/aarmp_quantile_boxplots.png")
+```
+
+```{r}
+long_data %>%
+  filter(value > 0) %>%
+  #filter(metric %in% c("Citations", "Publications", "Grants")) %>%
+  group_by(metric) %>%
+  mutate(decile_rank = as.factor(ntile(value, 10))) %>%
+  select(overall, metric, value, decile_rank, discipline) %>%
+  ggplot(aes(x = decile_rank, y = overall)) +
+    geom_boxplot() +
+    stat_summary(fun.y=median, geom="line", aes(group=1), color = "red")  +
+    stat_summary(fun.y=median, geom="point", aes(group=1), color = "red")  + 
+    facet_grid(discipline~metric) +
+    theme_minimal() +
+    theme(
+      strip.text = element_text(size = 12, face = "bold"),
+      axis.title = element_text(size = 12)
+    )
+    labs(x = "Decile ranks",
+         y = "Overall Teaching Quality")
+
+ggsave("~/Desktop/aarmp_disc_boxplots.png", height = 8, width = 8)
+```
+
+
+Get the regression infomraiton
+```{r}
+l <- c("None", "Moderate", "High")
+
+# This is the main formula we will be using, uses categorical research indicator variables
+formula_discrete <- overall ~ 
+            # Teacher Characteristics
+            gender +
+            scientific_age +
+            mentions_accent +
+            hotness +
+            rank +
+            # Course characteirstics
+            difficulty +
+            #difficulty_sd +
+            interest +
+            #interest_sd +
+            teaches_upper +
+            mentions_ta +
+            # Research characteristics
+            citedness +
+            all_output +
+            grantiness +
+            awardiness +
+            # Disciplinary differences
+            discipline + 
+            # University
+            uni_type +
+            uni_control +
+            review_count 
+
+df <- ready_data %>%
+  mutate(
+    rank = factor(rank, labels = c("Assistant", "Associate", "Full")),
+    scientific_age = scale(scientific_age),
+    uni_type = ifelse(is.na(uni_type) | uni_type != "r1", "Not R1", "R1"),
+    discipline = factor(discipline, labels = c("Engineering", "Humanities", "Medical", "Natural", "Social")),
+    difficulty = scale(difficulty),
+    interest = scale(interest),
+    citedness = factor(citedness, levels = l),
+    all_output = factor(all_output, levels = l),
+    output = factor(output, levels = l),
+    bookiness = factor(bookiness, levels = l),
+    awardiness = factor(awardiness, levels = l),
+    grantiness = factor(grantiness, levels = l)
+  ) %>%
+  filter(review_count >= 5)
+
+fit_research_discrete = lm(formula_discrete, data = df)
+summary(fit_research_discrete)
+```
+
+
+
+```{r}
+new_names = c(
+  difficulty = "Difficulty",
+  mentions_accentTRUE = "Mentions Accent = True",
+  mentions_taTRUE = "Mentions TA = True",
+  uni_controlpublic = "Uni. Control = Public",
+  uni_typeR1 = "Uni. Type = R1",
+  scientific_age = "Scientific Age",
+  all_outputHigh = "Output = High",
+  all_outputModerate = "Output = Moderate",
+  citednessModerate = "Citedness = Moderate",
+  teaches_upperTRUE = "Teaches Upper Level",
+  citednessHigh = "Citedness = High",
+  grantinessHigh = "Grants Held = High",
+  rankAssociate = "Rank = Associate",
+  awardinessModerate = "Awards Won = Moderate",
+  awardinessHigh = "Awards Won = High",
+  grantinessModerate = "Grants Held = Moderate",
+  disciplineSocial = "Social Sci.",
+  disciplineNatural = "Natural Sci.",
+  disciplineMedical = "Medical Sci.",
+  rankFull = "Rank = Full",
+  genderM = "Is Male",
+  disciplineHumanities = "Humanities",
+  hotnesshot = "Has Chili Pepper",
+  interest = "Student Interest",
+  review_count = "#Reviews"
+)
+
+
+ord <- names(fit_research_discrete$coefficients)[order(fit_research_discrete$coefficients, decreasing = T)]
+
+summ <- summary(fit_research_discrete)
+
+
+tidymodel <- tidy(fit_research_discrete, conf.int = T)
+
+p1 <- tidymodel %>%
+  filter(term != "(Intercept)") %>%
+  rowwise() %>%
+  mutate(
+    feature = ifelse(any(sapply(c("citedness", "awardiness", "grantiness", "all_output"), 
+                          function(x) {return(grepl(x, as.character(term)))}
+                          )
+                      ), "Feature", "Control")
+      ) %>%
+  ungroup() %>%
+  mutate(
+    term = plyr::revalue(term, new_names),
+    term = reorder(term, estimate)
+  ) %>%
+  ggplot(aes(x = term, y = estimate, shape = feature, color = feature)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.1) +
+  geom_hline(aes(yintercept = 0), linetype = "dotted", color = "black", size = 0.4) +
+  ylim(-0.6, 0.6) +
+  coord_flip() +
+  scale_shape_manual(name = "", values = c(1, 19)) +
+  scale_color_manual(name = "", values = c("darkgrey", "black")) +
+  theme_dakota() +
+  theme(
+    axis.title.x = element_text(size = 11),
+    axis.text.y = element_text(size = 11),
+    axis.title.y = element_blank(),
+    legend.position = c(0.75, 0.06),
+    legend.text = element_text(size = 12),
+    #legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black")
+    ) +
+  labs(y = "Model coefficient")
+
+
+ggsave("~/Desktop/aarmp_regression.png", p1, width = 4, height = 8)
+p1
+```
+
+## Figure SI.9
+```{r}
+# get set of relevant variables
+get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+}
+
+# Select the variables that we are most interested in
+selected <- ready_data[c(
+  "overall", "norm_citations", "norm_articlecount", "norm_confproc", "norm_bookcount", "norm_awardcount", "norm_grantcount"
+)]
+
+# Setup the labels for the figure
+labs <- c("RMP Quality", "Cites", "Articles", "Proceedings", "Books", "Awards", "Grants")
+
+# Run the correlations (this will take a while)
+correlations <- cor(selected, method="kendall", use="pairwise") 
+
+# Get the triangle
+tri_cor <- get_upper_tri(correlations)
+mat_melt <- reshape2::melt(tri_cor, na.rm = T)
+```
+
+
+
+```{r}
+# Plot the correlation matrix
+p2 <- ggplot(data = mat_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "black", size = 0.25) +
+  scale_fill_gradient2(low = "red", high = "blue", mid = "white", 
+     midpoint = 0, limit = c(-1,1), space = "Lab", name = "Kendall\nCorrelation") +
+  theme_bw() + 
+  coord_fixed() +
+  geom_text(aes(Var1, Var2, label = round(value, 3)), color = "black", size = 2.5) +
+  theme(
+    axis.text.x = element_text(angle = 45,  hjust = 0, size = 12, family = "Times"),
+    axis.text.y = element_text(size = 12, family = "Times"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    axis.ticks = element_blank(),
+    legend.title = element_text(size = 12),
+    #legend.title = element_blank(),
+    legend.justification = c(1, 0),
+    legend.position = c(1, 0.1),
+    #legend.position = "left",
+    #plot.margin = margin(10, 10, 10, 10),
+    legend.direction = "horizontal"
+    ) +
+    guides(fill = guide_colorbar(barwidth = 5, barheight = 1,
+           title.position = "top", title.hjust = 0.4)
+    ) +      
+  scale_x_discrete(labels = labs, position = "top") +
+  scale_y_discrete(position = "left", expand = c(0, 0), labels = labs)
+
+ggsave("~/Desktop/aarmp_kendall.png", p2, width = 5, height = 4)
+p2
+```
+
+
+
+
+```{r}
+# Load the tag data
+tag_data <- read_csv("~/Desktop/AARMP_2017/processed_files/aarmp_tagdata.csv", 
+    col_types = cols(X1 = col_skip()))
+
+
+mat <- as.matrix(tag_data[2:21])
+rownames(mat) <- tag_data$PersonId
+melted <- reshape2::melt(mat)
+
+melted <- melted[melted$value, ]
+melted$Var2 <- tolower(melted$Var2)
+overall_mat <- merge(melted, as.matrix(tag_data[c(22, 1)]), by.x = "Var1", by.y = "PersonId")
+
+medians <- (overall_mat %>% 
+  group_by(Var2) %>% 
+  dplyr::summarize(v = median(overall)) %>%
+  arrange(v))
+
+overall_mat$Var2 <- factor(overall_mat$Var2, levels <- medians$Var2, ordered = T)
+
+overall_mat <- overall_mat %>%
+  inner_join(ready_data, by = c("Var1" = "id")) %>%
+  dplyr::select(-scientific_age) # for some reason its really complaining about this variable, so I'm getting rid of it for now
+
+p3 <- overall_mat %>%
+  mutate(Overall = overall.x) %>%
+  ggplot(aes(x = as.factor(Var2), y = Overall)) +
+  geom_boxplot(outlier.alpha = 0.05,  alpha = 0.8, fill = "dodgerblue4") +
+  theme_dakota() +
+  labs(y = "Rating") +
+  guides(fill = FALSE) +
+  theme(
+    axis.text = element_text(size = 12, family = "Times"),
+    axis.title.y = element_blank(),
+    axis.title.x = element_text(size = 12),
+    plot.title = element_text(margin = margin(t = 5, b = 5))
+  ) +
+  coord_flip()
+  
+
+ggsave("~/Desktop/aarmp_tags.png", p3, height = 5, width = 5)
+p3
+```
+
+```{r}
+
+plots <- list(p2, p3)
+grobs <- list()
+widths <- list()
+heights <- list()
+
+for (i in 1:length(plots)){
+    grobs[[i]] <- ggplotGrob(plots[[i]])
+    widths[[i]] <- grobs[[i]]$widths[2:5]
+    heights[[i]] <- grobs[[i]]$heights[2:5]
+}
+
+maxwidth <- do.call(grid::unit.pmax, widths)
+maxheight <- do.call(grid::unit.pmax, heights)
+
+for (i in 1:length(grobs)){
+     grobs[[i]]$widths[2:5] <- as.list(maxwidth)
+     grobs[[i]]$heights[2:5] <- as.list(maxheight)
+}
+
+g1 <- do.call("grid.arrange", c(grobs, ncol = 1))
+
+g <- grid.arrange(p1, g1, ncol = 2)
+ggsave("~/Desktop/aarmp_figure.png", g, height = 8, width = 8)
+
+
+```
