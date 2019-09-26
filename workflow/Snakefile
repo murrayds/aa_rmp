@@ -26,6 +26,7 @@ AADATA_WITH_DISC_RANK_GENDER_CAR = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_ran
 
 AADATA_ENRICHED = osjoin(AA_PROCESSED_DIR, "aadata2016_enriched.csv")
 AADATA_PROCESSED = osjoin(AA_PROCESSED_DIR, "aadata2016_processed.csv")
+AADATA_UNMATCHED = osjoin(RMP_PROCESSED_DIR, "aadata_unmatched.csv")
 
 #####################
 # RAW DATA, RMP
@@ -38,7 +39,7 @@ RMP_COMMENTS = osjoin(RAW_DIR, "rmp_comments.csv")
 RMP_COMMENT_FEATURES = osjoin(RMP_PROCESSED_DIR, "rmp2017_comment_features.csv")
 
 RMP_ENRICHED = osjoin(RMP_PROCESSED_DIR, "rmp2017_enriched.csv")
-
+RMP_UNMATCHED = osjoin(RMP_PROCESSED_DIR, "rmp_unmatched.csv")
 
 #####################
 # MATCHED DATA
@@ -83,7 +84,9 @@ rule all:
         VANDERBILT_VALIDATION_DATA,
         AARMP_FINAL,
         TAG_DATA,
-        RMP_NAME_GENDER_SUMMARY
+        RMP_NAME_GENDER_SUMMARY,
+        RMP_UNMATCHED,
+        AADATA_UNMATCHED
 
 rule convert_aadata_excel_to_csv:
     input: RAW_AADATA_EXCEL,
@@ -177,3 +180,14 @@ rule get_rmp_name_gender_summary:
     input: rules.enrich_rmpdata.output
     output: RMP_NAME_GENDER_SUMMARY
     shell: "Rscript scripts/get_rmp_name_gender_summary.R {input} {output}"
+
+# Validation files
+rule get_aa_unmatched:
+    input: rules.process_enriched_aadata.output, rules.process_aarmp_data.output
+    output: AADATA_UNMATCHED
+    shell: "Rscript scripts/get_unmatched_aadata.R {input} {output}"
+
+rule get_rmp_unmatched:
+    input: rules.enrich_rmpdata.output, rules.process_aarmp_data.output
+    output: RMP_UNMATCHED
+    shell: "Rscript scripts/get_unmatched_rmpdata.R {input} {output}"
