@@ -77,16 +77,20 @@ AA_RMP_INST_CROSSWALK = osjoin(ADDITIONAL_DIR, "aainst_rmpinst_crosswalk.csv")
 VANDERBILT_DATA = osjoin(ADDITIONAL_DIR, "vanderbilt.csv")
 VANDERBILT_VALIDATION_DATA = osjoin(VALIDATION_DIR, "vanderbilt_validation.csv")
 
-RMP_NAME_GENDER_SUMMARY = osjoin(VALIDATION_DIR, "rmp_name_gender_summary.csv")
+AA_GENDER_VALIDATION = osjoin(VALIDATION_DIR, "aa_gender_validation.csv")
+RMP_GENDER_VALIDATION = osjoin(VALIDATION_DIR, "rmp_gender_validation.csv")
+VANDERBILT_GENDER_VALIDATION = osjoin(VALIDATION_DIR, "vanderbilt_gender_validation.csv")
 
 rule all:
     input:
         VANDERBILT_VALIDATION_DATA,
         AARMP_FINAL,
         TAG_DATA,
-        RMP_NAME_GENDER_SUMMARY,
         RMP_UNMATCHED,
-        AADATA_UNMATCHED
+        AADATA_UNMATCHED,
+        AA_GENDER_VALIDATION,
+        RMP_GENDER_VALIDATION,
+        VANDERBILT_GENDER_VALIDATION
 
 rule convert_aadata_excel_to_csv:
     input: RAW_AADATA_EXCEL,
@@ -176,11 +180,6 @@ rule get_tag_data:
     output: TAG_DATA
     shell: "Rscript scripts/get_tag_data.R {input} {output}"
 
-rule get_rmp_name_gender_summary:
-    input: rules.enrich_rmpdata.output
-    output: RMP_NAME_GENDER_SUMMARY
-    shell: "Rscript scripts/get_rmp_name_gender_summary.R {input} {output}"
-
 # Validation files
 rule get_aa_unmatched:
     input: rules.process_enriched_aadata.output, rules.process_aarmp_data.output
@@ -191,3 +190,18 @@ rule get_rmp_unmatched:
     input: rules.enrich_rmpdata.output, rules.process_aarmp_data.output
     output: RMP_UNMATCHED
     shell: "Rscript scripts/get_unmatched_rmpdata.R {input} {output}"
+
+rule get_aa_gender_validation:
+    input: rules.process_enriched_aadata.output
+    output: AA_GENDER_VALIDATION
+    shell: "Rscript scripts/get_aadata_gender_validation.R {input} {output}"
+
+rule get_rmp_gender_validation:
+    input: rules.enrich_rmpdata.output
+    output: RMP_GENDER_VALIDATION
+    shell: "Rscript scripts/get_rmpdata_gender_validation.R {input} {output}"
+
+rule get_vanderbilt_gender_validation:
+    input: rules.assign_custom_gender_to_vanderbilt.output
+    output: VANDERBILT_GENDER_VALIDATION
+    shell: "Rscript scripts/get_vanderbilt_gender_validation.R {input} {output}"
