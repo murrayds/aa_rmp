@@ -26,7 +26,7 @@ AADATA_WITH_DISC_RANK_GENDER_CAR = osjoin(AA_PROCESSED_DIR, "aadata2016_disc_ran
 
 AADATA_ENRICHED = osjoin(AA_PROCESSED_DIR, "aadata2016_enriched.csv")
 AADATA_PROCESSED = osjoin(AA_PROCESSED_DIR, "aadata2016_processed.csv")
-AADATA_UNMATCHED = osjoin(RMP_PROCESSED_DIR, "aadata_unmatched.csv")
+AADATA_UNMATCHED = osjoin(AA_PROCESSED_DIR, "aadata_unmatched.csv")
 
 #####################
 # RAW DATA, RMP
@@ -88,6 +88,7 @@ rule all:
         TAG_DATA,
         RMP_UNMATCHED,
         AADATA_UNMATCHED,
+        AADATA_ENRICHED,
         AA_GENDER_VALIDATION,
         RMP_GENDER_VALIDATION,
         VANDERBILT_GENDER_VALIDATION

@@ -10,4 +10,4 @@ input_file <- args[1]
 output_file <- args[2]
 
 as_excel <- readxl::read_excel(input_file)
-write.csv(as_excel, output_file)
+write.csv(as_excel, output_file, row.names = FALSE)

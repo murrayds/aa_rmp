@@ -19,7 +19,7 @@ aarmp <- read.csv(aarmp_path)
 
 # While we are here, create unmatched datasets for the AA and the RMP datasets to be used for later
 aa_unmatched <- aadata %>%
-  left_join(aarmp %>% select(AA_id) %>% 
+  left_join(aarmp %>% select(AA_id) %>%
                       mutate(new_id = AA_id),
             by = c("AA.PersonId" = "AA_id"), all.x = T
   ) %>%
@@ -30,4 +30,4 @@ aa_unmatched <- aadata %>%
   slice(1)
 
 
-write.csv(aa_unmatched, output_path)
+write.csv(aa_unmatched, output_path, row.names = FALSE)

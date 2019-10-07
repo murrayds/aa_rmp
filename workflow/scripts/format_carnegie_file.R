@@ -26,4 +26,4 @@ carnegie <- merge(carnegie,
                   by.x = "CC.NAME",
                   by.y = "CARNEGIE")
 
-write.csv(carnegie, output_path)
+write.csv(carnegie, output_path, row.names = FALSE)

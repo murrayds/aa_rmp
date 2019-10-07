@@ -27,4 +27,4 @@ rmp_unmatched <- rmpdata %>%
   mutate(type = "unmatched")
 
 
-write.csv(rmp_unmatched, output_path)
+write.csv(rmp_unmatched, output_path, row.names = FALSE)

@@ -45,4 +45,4 @@ colnames(tagdata) <- c("overall", unq)
 tagdata$PersonId <- aarmp$AA_id
 
 # Write the output
-write.csv(tagdata, output_path)
+write.csv(tagdata, output_path, row.names = FALSE)

@@ -90,4 +90,4 @@ aadata$CC.LOCALE_SIZE <- plyr::mapvalues(aadata$CC.LOCALE,
                               c(11, 21, 31, 41, 12, 22, 32, 42, 13, 23, 33),
                               c(rep("large", 4), rep("medium", 4), rep("small", 3)))
 
-write.csv(aadata, output_path)
+write.csv(aadata, output_path, row.names = FALSE)

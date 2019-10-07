@@ -81,4 +81,4 @@ aarmp <- aarmp %>% group_by(AA_id) %>% sample_n(size = 1)
 aarmp <- aarmp[aarmp$AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor"), ]
 
 
-write.csv(aarmp, output_path)
+write.csv(aarmp, output_path, row.names = FALSE)

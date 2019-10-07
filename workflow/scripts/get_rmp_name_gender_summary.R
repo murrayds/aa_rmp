@@ -33,4 +33,4 @@ rmp_gender_info <- rmpdata %>%
   )
 
 # And write the output
-write.csv(rmp_gender_info, output_path)
+write.csv(rmp_gender_info, output_path, row.names = FALSE)

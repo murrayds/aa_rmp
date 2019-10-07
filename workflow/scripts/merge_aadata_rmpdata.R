@@ -123,4 +123,4 @@ aarmp <- aarmp %>%
   filter(!has_duplicate | (has_duplicate & row_number() == 1))
 
 
-write.csv(aarmp, output_path)
+write.csv(aarmp, output_path, row.names = FALSE)

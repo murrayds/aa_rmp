@@ -33,4 +33,4 @@ aa_gender <- aadata %>%
   )
 
 # Save the file
-write.csv(aa_gender, output_path)
+write.csv(aa_gender, output_path, row.names = FALSE)
