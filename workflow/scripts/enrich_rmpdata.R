@@ -19,7 +19,8 @@ output_path <- args[4]
 rmpdata <- read.csv(rmpdata_path)
 
 # Load the custom geneder assignment data
-custom_gender <- read.csv(gender_path)
+custom_gender <- read.csv(gender_path) %>%
+  select(OUR.Name, OUR.Gender)
 
 # Now we continue to assign gender to the RMP data
 rmpdata$RMP.Fname_lower <- tolower(rmpdata$RMP.Fname)
@@ -44,4 +45,4 @@ commentdata <- read.csv(commentdata_path, stringsAsFactors=FALSE)
 rmpdata <- merge(rmpdata, commentdata,  all.x=TRUE)
 
 # And write the output
-write.csv(rmpdata, output_path)
+write.csv(rmpdata, output_path, row.names = FALSE)

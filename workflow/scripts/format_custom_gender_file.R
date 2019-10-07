@@ -26,6 +26,6 @@ colnames(custom_gender) <- sapply(colnames(custom_gender), function(x) { paste0(
 
 # make everything lowercase, or else merging becomes....complicated
 custom_gender$OUR.Name <- tolower(custom_gender$OUR.Name)
+custom_gender$OUR.Gender <- tolower(custom_gender$OUR.Gender)
 
-
-write.csv(custom_gender, output_path)
+write.csv(custom_gender, output_path, row.names = FALSE)

@@ -105,4 +105,4 @@ cap <- quantile(professor_data$OUR.numcomment, 0.95)
 professor_data$OUR.numcomment.capped <- with(professor_data, ifelse(OUR.numcomment > cap, cap, OUR.numcomment))
 
 # And write the output
-write.csv(professor_data, output_path)
+write.csv(professor_data, output_path, row.names = FALSE)

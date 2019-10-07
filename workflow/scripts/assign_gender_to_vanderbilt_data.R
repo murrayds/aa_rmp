@@ -23,4 +23,4 @@ vanderbilt_assigned <- merge(vanderbilt,
                              by.y = "OUR.Name",
                              all.x = T)
 
-write.csv(vanderbilt_assigned, output_path)
+write.csv(vanderbilt_assigned, output_path, row.names = FALSE)

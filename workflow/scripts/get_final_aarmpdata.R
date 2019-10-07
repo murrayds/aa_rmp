@@ -48,9 +48,7 @@ ready_data <- data.frame(id = aarmp$AA_id,
                          gender = aarmp$OUR.assigned_gender,
                          discipline = aarmp$`OUR.Level.4`,
                          uni_type = aarmp$CC.uni_type,
-                         uni_control = aarmp$CC.CONTROL,
-                         uni_locale_size = aarmp$CC.LOCALE_SIZE,
-                         teaches_upper = aarmp$OUR.teaches_upper
+                         uni_control = aarmp$CC.CONTROL
 )
 
 # Filter to include only those for whom a gender could be identified
@@ -63,4 +61,4 @@ ready_data <- na.omit(ready_data)
 ready_data$raw_age <- ready_data$scientific_age
 
 
-write.csv(ready_data, output_path)
+write.csv(ready_data, output_path, row.names = FALSE)

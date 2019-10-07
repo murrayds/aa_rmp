@@ -12,4 +12,4 @@ output_file <- args[3]
 
 input <- readr::read_csv(input_file)
 colnames(input) <- sapply(colnames(input), function(x) { paste0(prefix_to_add, x) })
-write.csv(input, output_file)
+write.csv(input, output_file, row.names = FALSE)

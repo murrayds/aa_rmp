@@ -41,4 +41,4 @@ rmp_gender <- rmp_gender_info %>%
 
 
 # Save the file
-write.csv(rmp_gender, output_path)
+write.csv(rmp_gender, output_path, row.names = FALSE)

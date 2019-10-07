@@ -20,4 +20,4 @@ van_gender <- vanderbilt %>%
          gender_vanderbilt_provided = SubmittedGender)
 
 # Save the file
-write.csv(van_gender, output_path)
+write.csv(van_gender, output_path, row.names = FALSE)

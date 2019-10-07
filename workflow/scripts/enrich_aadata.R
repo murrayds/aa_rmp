@@ -20,7 +20,8 @@ aadata <- read.csv(aadata_path)
 #
 # First, add the disciplinary taxonomy to the aadata
 #
-taxonomy <- read.csv(taxonomy_path)
+taxonomy <- read.csv(taxonomy_path) %>%
+  select(OUR.Level1Name,	OUR.Level.3.CLEAN,	OUR.Level.4)
 
 aadata <- merge(aadata,
                 taxonomy,
@@ -32,17 +33,24 @@ aadata <- merge(aadata,
 # Next, add the carnegie classifications...
 #
 # Load the custom geneder assignment data
-carnegie <- read.csv(carnegie_path)
+carnegie <- read.csv(carnegie_path) %>%
+  select(
+    CC.NAME, AA_INST, CC.CONTROL, CC.BASIC2015
+  )
 
 aadata <- merge(aadata,
                 carnegie,
                 by.x = "AA.InstitutionName",
-                by.y = "AA_INST")
+                by.y = "AA_INST",
+                all.x = T)
 
 #
 # Next, select the most recent faculty rank for each person
 #
-faculty <- read.csv(faculty_path)
+faculty <- read.csv(faculty_path) %>%
+  select(
+    PersonId, ProductYear, RankType
+  )
 
 rank <- faculty %>%
   # get most recent rank as recorded in AA
@@ -63,7 +71,8 @@ aadata <- merge(aadata,
 # Next assign gender information based on first names
 #
 # Load the custom geneder assignment data
-custom_gender <- read.csv(gender_path)
+custom_gender <- read.csv(gender_path) %>%
+  select(OUR.Name, OUR.Gender)
 
 # check first name, if single-character or punctuation, then continue to middle name
 # if middle name is invalid, then don't include it...
