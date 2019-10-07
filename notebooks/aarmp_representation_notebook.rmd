@@ -1,0 +1,372 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(broom)
+aarmp <- read.csv("/Users/dakotamurray/Dropbox/AcademicAnalytics/Data/Derived/Processed/AARMP/aarmp_processed.csv")
+
+aa_unmatched <- read.csv("/Users/dakotamurray/Dropbox/AcademicAnalytics/Data/Derived/Processed/AA/aadata_unmatched.csv") %>%
+  filter(AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor"))
+
+rmp_unmatched <- read.csv("/Users/dakotamurray/Dropbox/AcademicAnalytics/Data/Derived/Processed/RMP/rmp_unmatched.csv")
+```
+
+
+## By rank
+```{r}
+matched <- aarmp
+unmatched <- aa_unmatched
+
+rank_matched <- matched %>% 
+  rename(
+    Publications = OUR.output,
+    Citations = OUR.citedness,
+    Grants = OUR.grantiness,
+    Awards = OUR.awardiness
+  ) %>%
+  gather(key, value, Publications, Citations, Grants, Awards) %>%
+  mutate(
+    key = factor(key, levels = rev(c("Publications", "Citations", "Grants", "Awards"))),
+    value = paste0(key, ":", value)
+  ) %>%
+  group_by(key) %>%
+  mutate(total = n()) %>%
+  group_by(key, value) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+  ) %>%
+  arrange(desc(key), desc(value))
+
+
+rank_unmatched <- unmatched %>% 
+  rename(
+    Publications = OUR.output,
+    Citations = OUR.citedness,
+    Grants = OUR.grantiness,
+    Awards = OUR.awardiness
+  ) %>%
+  gather(key, value, Publications, Citations, Grants, Awards) %>%
+  mutate(
+    key = factor(key, levels = rev(c("Publications", "Citations", "Grants", "Awards"))),
+    value = paste0(key, ":", value)
+  ) %>%
+  filter(!is.na(value)) %>%
+  group_by(key) %>%
+  mutate(total = n()) %>%
+  group_by(key, value) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+  ) %>%
+  arrange(desc(key), desc(value))
+
+rank_matched
+rank_unmatched
+```
+
+
+
+# By gender
+```{r}
+gender_matched <- matched %>% 
+  mutate(gender = ifelse(OUR.assigned_gender %in% c("M", "F"), as.character(OUR.assigned_gender), "UNK")) %>%
+  filter(gender != "UNK") %>%
+  mutate(
+    total = n()
+  ) %>%
+  group_by(gender) %>%
+  summarize(
+    prop = round(n() / first(total) * 100, 1)
+  )
+
+
+gender_unmatched <- unmatched %>% 
+  mutate(gender = ifelse(OUR.Gender %in% c("M", "F"), as.character(OUR.Gender), "UNK")) %>%
+  filter(gender != "UNK") %>%
+  mutate(
+    total = n()
+  ) %>%
+  group_by(gender) %>%
+  summarize(
+    prop = round(n() / first(total) * 100, 1)
+  )
+
+gender_matched
+gender_unmatched
+```
+
+
+## By rank
+```{r}
+matched %>% 
+  group_by(AA.RankType) %>%
+  summarize(
+    prop = round(n() / dim(matched)[1] * 100, 1)
+  )
+
+
+unmatched %>% 
+  ungroup() %>%
+  mutate(total = n()) %>%
+  group_by(AA.RankType) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+  )
+```
+
+
+## Age of matched vs. unmatched
+```{r}
+matched %>%
+  summarize(
+    min = min(OUR.age),
+    quartile1 = quantile(OUR.age, 0.25),
+    med = median(OUR.age),
+    quartile3 = quantile(OUR.age, 0.75),
+    max = max(OUR.age)
+  )
+
+
+unmatched %>%
+  ungroup() %>%
+  mutate(OUR.age = 2017 - AA.DegreeYear) %>%
+  summarize(
+    min = min(OUR.age),
+    quartile1 = quantile(OUR.age, 0.25),
+    med = median(OUR.age),
+    quartile3 = quantile(OUR.age, 0.75),
+    max = max(OUR.age)
+  )
+
+```
+
+
+## Univeristy Type:
+```{r}
+matched %>%
+  mutate(
+    CC.uni_type = ifelse(CC.uni_type == "r1", "R1", "Not R1")
+  ) %>%
+  ungroup() %>%
+  mutate(total = n()) %>%
+  group_by(CC.uni_type) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+  )
+
+unmatched %>%
+  mutate(
+    CC.uni_type = ifelse(CC.uni_type == "r1", "R1", "Not R1")
+  ) %>%
+  ungroup() %>%
+  mutate(total = n()) %>%
+  group_by(CC.uni_type) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+  )
+```
+
+
+## By univeristy contorl
+```{r}
+matched %>%
+  ungroup() %>%
+  mutate(total = n()) %>%
+  group_by(CC.CONTROL) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+  )
+
+unmatched %>%
+  ungroup() %>%
+  mutate(total = n()) %>%
+  group_by(CC.CONTROL) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+)
+```
+
+
+## Discipline
+```{r}
+matched %>%
+  ungroup() %>%
+  mutate(total = n()) %>%
+  group_by(OUR.Level.4) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+  )
+
+unmatched %>%
+  ungroup() %>%
+  mutate(total = n()) %>%
+  group_by(OUR.Level.4) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+)
+```
+
+
+
+```{r}
+matched <- aarmp 
+unmatched <- rmp_unmatched %>%
+  filter(OUR.numcomment > 2)
+
+
+matched_dist <- matched %>%
+  gather(key, value, OUR.Overall.mean, RMP.LevelOfDifficulty, OUR.interest.mean, OUR.numcomment.capped) %>%
+  select(key, value) %>%
+  mutate(type = "matched")
+  
+
+unmatched_dist <- unmatched %>% 
+  gather(key, value, OUR.Overall.mean, RMP.LevelOfDifficulty, OUR.interest.mean, OUR.numcomment.capped) %>%
+  select(key, value) %>%
+  mutate(type = "unmatched")
+
+data <- rbind(matched_dist, unmatched_dist) %>%
+  mutate(
+    key = factor(key, 
+                 levels = c("OUR.Overall.mean", "RMP.LevelOfDifficulty", "OUR.interest.mean", "OUR.numcomment.capped"),
+                 labels = c("Overall Quality", "Difficulty", "Interest", "Number Comments")
+          )
+  ) 
+
+data_meds <- data %>%
+  group_by(key, type) %>%
+  summarize(
+    med = round(median(value, na.rm = T), 1),
+    mu = round(mean(value, na.rm = T), 1),
+    value = med
+  )
+
+data %>%
+  ggplot(aes(x = as.factor(type), y = value, fill = type)) +
+  geom_boxplot() +
+  geom_label(data = data_meds, aes(label = med)) +
+  facet_wrap(~key, scale = "free_y") +
+  scale_fill_manual(values = c("lightgrey", "white")) +
+  guides(fill = F) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  )
+```
+
+
+## Mentions accent
+```{r}
+matched %>%
+  group_by(OUR.mentions_accent) %>%
+  summarize(
+    prop = round(n() / dim(matched)[1] * 100, 1)
+  )
+
+
+unmatched %>%
+  group_by(OUR.mentions_accent) %>%
+  summarize(
+    prop = round(n() / dim(unmatched)[1] * 100, 1)
+  )
+```
+
+
+## Mentions TA
+```{r}
+matched %>%
+  filter(!is.na(OUR.mentions_ta)) %>%
+  group_by(OUR.mentions_ta) %>%
+  summarize(
+    prop = round(n() / dim(matched)[1] * 100, 1)
+  )
+
+
+unmatched %>%
+  filter(!is.na(OUR.mentions_ta)) %>%
+  group_by(OUR.mentions_ta) %>%
+  summarize(
+    prop = round(n() / dim(unmatched)[1] * 100, 1)
+  )
+```
+
+## Has Chili Pepper
+```{r}
+matched %>%
+  group_by(RMP.Chili) %>%
+  summarize(
+    prop = round(n() / dim(matched)[1] * 100, 1)
+  )
+
+
+unmatched %>%
+  group_by(RMP.Chili) %>%
+  summarize(
+    prop = round(n() / dim(unmatched)[1] * 100, 1)
+  )
+```
+
+
+```{r}
+matched %>%
+  mutate(age = as.factor(OUR.age)) %>%
+  group_by(age) %>%
+  summarize(
+    prop.chili = sum(RMP.Chili == "['/assets/chilis/new-hot-chili.png']", na.rm = T) / n()
+  ) %>%
+  filter(as.numeric(age) < 40) %>%
+  ggplot(aes(x = as.numeric(age), y = prop.chili)) +
+    geom_point() +
+    geom_line() + 
+    theme_minimal() +
+    labs(x = "Scientific Age",
+         y = "Proportion with Chili") +
+    theme(axis.title = element_text(size = 12))
+```
+
+
+```{r message=FALSE, warning=FALSE}
+fig_SI.1 <- aarmp %>%
+  gather(key, value = count, AA.CitationCount, AA.ArticleCount, AA.ConfProcCount, AA.GrantCount, AA.AwardCount, AA.BookCount) %>%
+  group_by(key, count, OUR.Level.4) %>%
+  summarize(
+    freq = n()
+  ) %>%
+  ungroup() %>%
+  mutate(
+    key = factor(key),
+    key = factor(key, levels = levels(key)[c(1, 5, 3, 2, 4, 6)])
+  ) %>%
+  filter(count < 500) %>%
+  ggplot(aes(x = count, y = freq, color = OUR.Level.4, shape = OUR.Level.4)) +
+  geom_point(alpha = 0.8) +
+  facet_wrap(~key, 
+             scales = "free_x",
+             labeller = labeller(key = c(
+               AA.AwardCount = "Award Count",
+               AA.BookCount = "Book Count",
+               AA.CitationCount = "Citation Count",
+               AA.GrantCount = "Grant Count",
+               AA.ArticleCount = "Article Count",
+               AA.ConfProcCount = "Conference Proceedings"
+             ))) +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
+  scale_x_continuous(limits = c(0, NA)) +
+  labs(x = "Log10(Count)",
+       y = "Log10(Frequency)"
+       ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 12, face = "bold"),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  )
+
+fig_SI.1
+ggsave("~/Desktop/aarmp_fig_SI1.png", plot = fig_SI.1, height = 6, width = 7)
+```

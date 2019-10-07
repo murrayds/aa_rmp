@@ -7,7 +7,9 @@ output: html_notebook
 # Load necessary packages and data
 ```{r}
 library(tidyverse)
-
+library(stargazer)
+library(grid)
+library(gridExtra)
 # Load the data
 ready_data <- readr::read_csv("~/Desktop/AARMP_2017/processed_files/aarmp_ready_data.csv", 
     col_types = cols(X1 = col_skip()))
@@ -23,7 +25,10 @@ Perform data processing.
 ready_data <- ready_data[ready_data$gender %in% c("M", "F"), ]
 
 # Remove NA values...
-ready_data <- na.omit(ready_data)
+ready_data <- na.omit(ready_data) %>%
+  # convert age into decades
+  mutate(scientific_age = scientific_age / 10)
+
 dim(ready_data)
 ```
 
@@ -81,6 +86,9 @@ long_data %>%
     facet_grid(~metric) +
     geom_hline(data = no_count, aes(yintercept = med), color = "black", alpha = 0.6, size = 1) +
     theme_minimal() +
+    theme(
+      strip.text = element_text(size = 12)
+    ) +
     labs(x = "Decile ranks",
          y = "Overall Teaching Quality")
 
@@ -103,7 +111,7 @@ long_data %>%
     theme(
       strip.text = element_text(size = 12, face = "bold"),
       axis.title = element_text(size = 12)
-    )
+    ) +
     labs(x = "Decile ranks",
          y = "Overall Teaching Quality")
 
@@ -128,7 +136,7 @@ formula_discrete <- overall ~
             #difficulty_sd +
             interest +
             #interest_sd +
-            teaches_upper +
+            #teaches_upper +
             mentions_ta +
             # Research characteristics
             citedness +
@@ -160,41 +168,59 @@ df <- ready_data %>%
   filter(review_count >= 5)
 
 fit_research_discrete = lm(formula_discrete, data = df)
+
+# used for copying numbers to text
+broom::tidy(fit_research_discrete, conf.int = T) %>%
+  mutate(estimate = round(estimate, 3),
+         conf.low = round(conf.low, 2),
+         conf.high = round(conf.high, 2)) %>%
+  select(term, estimate, conf.low, conf.high)
+
+
 summary(fit_research_discrete)
 ```
 
-
-
 ```{r}
 new_names = c(
-  difficulty = "Difficulty",
-  mentions_accentTRUE = "Mentions Accent = True",
-  mentions_taTRUE = "Mentions TA = True",
-  uni_controlpublic = "Uni. Control = Public",
-  uni_typeR1 = "Uni. Type = R1",
+  genderM = "Is Male",
   scientific_age = "Scientific Age",
-  all_outputHigh = "Output = High",
-  all_outputModerate = "Output = Moderate",
-  citednessModerate = "Citedness = Moderate",
-  teaches_upperTRUE = "Teaches Upper Level",
-  citednessHigh = "Citedness = High",
-  grantinessHigh = "Grants Held = High",
+  mentions_accentTRUE = "Mentions Accent = True",
+  hotnesshot = "Has Chili Pepper",
   rankAssociate = "Rank = Associate",
+  rankFull = "Rank = Full",
+  difficulty = "Difficulty",
+  interest = "Student Interest",
+  mentions_taTRUE = "Mentions TA = True",
+  citednessModerate = "Citedness = Moderate",
+  citednessHigh = "Citedness = High",
+  all_outputModerate = "Output = Moderate",
+  all_outputHigh = "Output = High",
+  grantinessModerate = "Grants Held = Moderate",
+  grantinessHigh = "Grants Held = High",
   awardinessModerate = "Awards Won = Moderate",
   awardinessHigh = "Awards Won = High",
-  grantinessModerate = "Grants Held = Moderate",
-  disciplineSocial = "Social Sci.",
-  disciplineNatural = "Natural Sci.",
-  disciplineMedical = "Medical Sci.",
-  rankFull = "Rank = Full",
-  genderM = "Is Male",
   disciplineHumanities = "Humanities",
-  hotnesshot = "Has Chili Pepper",
-  interest = "Student Interest",
+  disciplineMedical = "Medical Sci.",
+  disciplineNatural = "Natural Sci.",
+  disciplineSocial = "Social Sci.",
+  uni_typeR1 = "Uni. Type = R1",
+  uni_controlpublic = "Uni. Control = Public",
   review_count = "#Reviews"
 )
 
 
+aarmp_reg_table <- stargazer(fit_research_discrete,
+          covariate.labels = new_names,
+          ci = TRUE,
+          single.row = T,
+          type = "html", 
+          style = "ajs")
+
+write(aarmp_reg_table, "~/Desktop/aarmp_reg_table.html")
+
+```
+
+```{r}
 ord <- names(fit_research_discrete$coefficients)[order(fit_research_discrete$coefficients, decreasing = T)]
 
 summ <- summary(fit_research_discrete)
@@ -209,7 +235,7 @@ p1 <- tidymodel %>%
     feature = ifelse(any(sapply(c("citedness", "awardiness", "grantiness", "all_output"), 
                           function(x) {return(grepl(x, as.character(term)))}
                           )
-                      ), "Feature", "Control")
+                      ), "Research", "Characteristic")
       ) %>%
   ungroup() %>%
   mutate(
@@ -222,8 +248,8 @@ p1 <- tidymodel %>%
   geom_hline(aes(yintercept = 0), linetype = "dotted", color = "black", size = 0.4) +
   ylim(-0.6, 0.6) +
   coord_flip() +
-  scale_shape_manual(name = "", values = c(1, 19)) +
-  scale_color_manual(name = "", values = c("darkgrey", "black")) +
+  scale_shape_manual(name = "", values = c(19, 1)) +
+  scale_color_manual(name = "", values = c("black", "blue")) +
   theme_dakota() +
   theme(
     axis.title.x = element_text(size = 11),
@@ -239,6 +265,115 @@ p1 <- tidymodel %>%
 
 ggsave("~/Desktop/aarmp_regression.png", p1, width = 4, height = 8)
 p1
+```
+
+
+Get the regression infomraiton
+```{r}
+l <- c("None", "Moderate", "High")
+
+# Here is the second fomula, this time using the continuous field-noramlized indicators
+formula_continuous <- overall ~ 
+            # Teacher Characteristics
+            gender +
+            scientific_age +
+            mentions_accent +
+            hotness +
+            rank +
+            # Course characteirstics
+            difficulty +
+            interest +
+            mentions_ta +
+            # Research characteristics
+            norm_citations +
+            norm_all_pubcount +
+            norm_awardcount +
+            norm_grantcount +
+            # Disciplinary differences
+            discipline + 
+            # University
+            uni_type +
+            uni_control +
+            review_count
+
+df <- ready_data %>%
+  mutate(
+    rank = factor(rank, labels = c("Assistant", "Associate", "Full")),
+    scientific_age = scale(scientific_age),
+    uni_type = ifelse(is.na(uni_type) | uni_type != "r1", "Not R1", "R1"),
+    discipline = factor(discipline, labels = c("Engineering", "Humanities", "Medical", "Natural", "Social")),
+    difficulty = scale(difficulty),
+    interest = scale(interest)
+  ) %>%
+  filter(review_count >= 5)
+
+fit_research_continuous <- lm(formula_continuous, data = df)
+
+
+# used for copying numbers to text
+broom::tidy(fit_research_continuous, conf.int = T) %>%
+  mutate(estimate = round(estimate, 3),
+         conf.low = round(conf.low, 2),
+         conf.high = round(conf.high, 2)) %>%
+  select(term, estimate, conf.low, conf.high)
+
+
+summary(fit_research_continuous)
+```
+
+```{r}
+new_names = c(
+  genderM = "Is Male",
+  scientific_age = "Scientific Age",
+  mentions_accentTRUE = "Mentions Accent = True",
+  hotnesshot = "Has Chili Pepper",
+  rankAssociate = "Rank = Associate",
+  rankFull = "Rank = Full",
+  difficulty = "Difficulty",
+  interest = "Student Interest",
+  mentions_taTRUE = "Mentions TA = True",
+  norm_citations = "Citations",
+  norm_all_pubcount = "Publications",
+  norm_awardcount = "Awards",
+  norm_grantcount = "Grants",
+  disciplineHumanities = "Humanities",
+  disciplineMedical = "Medical Sci.",
+  disciplineNatural = "Natural Sci.",
+  disciplineSocial = "Social Sci.",
+  uni_typeR1 = "Uni. Type = R1",
+  uni_controlpublic = "Uni. Control = Public",
+  review_count = "#Reviews"
+)
+
+
+aarmp_reg_table_continuous <- stargazer(fit_research_continuous,
+          covariate.labels = new_names,
+          ci = TRUE,
+          single.row = T,
+          type = "html", 
+          style = "ajs")
+
+write(aarmp_reg_table, "~/Desktop/aarmp_reg_table_continuous.html")
+
+```
+
+
+We can perform an ANOVA to compare the two models and find no real improvement in their ability to explain the data. 
+```{r}
+anova(fit_research_discrete, fit_research_continuous)
+```
+
+```{r}
+ready_data_filt <- ready_data %>%
+  gather(key, value, norm_all_pubcount, norm_citations, norm_dollars) %>%
+  filter(value > 0)
+
+ready_data_filt %>%
+  ggplot(aes(x = value)) +
+  stat_density() +
+  coord_cartesian(xlim = c(0, 10)) +
+  facet_wrap(~key) +
+  geom_vline(aes(xintercept = quantile(value, 0.9)))
 ```
 
 ## Figure SI.9
@@ -376,6 +511,145 @@ g1 <- do.call("grid.arrange", c(grobs, ncol = 1))
 
 g <- grid.arrange(p1, g1, ncol = 2)
 ggsave("~/Desktop/aarmp_figure.png", g, height = 8, width = 8)
+```
 
+```{r}
+discipline_box <- ready_data %>%
+  mutate(
+    discipline = factor(discipline, 
+                        levels = c("Engineering", "Natural Sciences", "Medical sciences", "Social Sciences", "Humanities"),
+                        labels = c("Eng.", "Natural", "Medical", "Social", "Hum."))
+  ) %>%
+  ggplot(aes(x = discipline, y = overall)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold")
+  ) +
+  labs(
+    title = "Discipline",
+    y = "Overall Teaching Quality"
+    )
+```
+
+
+```{r}
+chili_box <- ready_data %>%
+  mutate(
+    hotness = factor(hotness, labels = c("No Chili Pepper", "Has Chili Pepper"))
+  ) %>%
+  ggplot(aes(x = hotness, y = overall)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12, face = "bold")
+  ) +
+  labs(
+    title = "Has chili pepper",
+    y = ""
+    )
+```
+
+
+```{r}
+gender_box <- ready_data %>%
+  mutate(
+    gender = factor(gender, labels = c("Female", "Male"))
+  ) %>%
+  ggplot(aes(x = gender, y = overall)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12, face = "bold")
+  ) +
+  labs(
+    title = "Gender",
+    y = ""
+    )
+```
+
+
+```{r}
+uni_type_box <- ready_data %>%
+  mutate(
+    uni_type = ifelse(uni_type == "r1", "R1", "Not R1")
+  ) %>%
+  ggplot(aes(x = uni_type, y = overall)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12, face = "bold")
+  ) +
+  labs(
+    title = "Univeristy Type",
+    y = "")
+```
+
+
+```{r}
+uni_control_box <- ready_data %>%
+  mutate(
+    uni_control = factor(uni_control, labels = c("Private", "Public"))
+  ) %>%
+  ggplot(aes(x = uni_control, y = overall)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12, face = "bold")
+  ) +
+  labs(
+    title = "University Control",
+    y = "")
+```
+
+
+```{r}
+rank_box <- ready_data %>%
+  mutate(
+    rank = factor(rank, labels = c("Assistant", "Associate", "Full"))
+  ) %>%
+  ggplot(aes(x = rank, y = overall)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12, face = "bold")
+  ) +
+  labs(
+    title = "Professor rank",
+    y = "")
+```
+
+
+```{r}
+g <- grid.arrange(discipline_box, gender_box, chili_box, uni_type_box, uni_control_box, rank_box, ncol = 2)
+ggsave("~/Desktop/aarmp_boxplots_fig.png", g, width = 8, height = 8)
+```
+
+
+```{r}
+ready_data %>%
+  ggplot(aes(x = rank, y = scientific_age)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(
+    plot.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12, face = "bold")
+  ) +
+  labs(
+    y = "Scientific Age")
 
 ```

@@ -1,0 +1,119 @@
+---
+title: "AARMP Descriptive"
+author: "Dakota Murray"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+aarmp <- read.csv("/Users/dakotamurray/Dropbox/AcademicAnalytics/Data/Derived/Processed/AARMP/aarmp_processed.csv")
+aadata <- read.csv("/Users/dakotamurray/Dropbox/AcademicAnalytics/Data/Derived/Processed/AA/aadata2016_processed.csv") %>% 
+  group_by(AA.PersonId, AA.ProgramId) %>%
+  slice(1)
+
+rmp <- read.csv("/Users/dakotamurray/Dropbox/AcademicAnalytics/Data/Derived/Processed/RMP/rmp2017_enriched.csv")
+```
+
+
+## Descriptive statistics of the data
+### Number of records in the AA2016 dataset
+```{r}
+dim(aadata)[1]
+```
+
+### Number of records (including duplicate disciplinary records) for tenure and tenure-track professors in the AA2016 dataset
+```{r}
+tt_profs <- aadata %>%
+  filter(AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor"))
+```
+
+
+### Number of distinct tenure and tenure track professors in the AA2016 dataset
+```{r}
+dim(aadata %>%
+  filter(AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor")) %>%
+  group_by(AA.PersonId) %>%
+  filter(row_number() == 1))[1]
+```
+
+### Number of institutions represented by tenure and tenure track professors in AA2016
+```{r}
+sum(!is.na(unique(tt_profs$AA.InstitutionName)))
+```
+
+### Number of level 1 disciplinary classifications in the AA2016 dataset
+```{r}
+length(unique(tt_profs$AA.L1Id))
+```
+
+### Number of individuals with at duplicate records in AA2016
+```{r}
+aa_filtered <- aadata %>%
+  filter(AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor")) %>%
+  group_by(AA.PersonId) %>%
+  summarize(has_duplicate = n() > 1)
+
+sum(aa_filtered$has_duplicate)
+```
+
+### Number of individuals who have duplicate professors with distinct NSF classifications
+```{r}
+tt_profs <- aadata %>%
+  filter(AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor")) %>%
+  group_by(AA.PersonId) %>%
+  summarize(
+    n_unique_nsf = length(unique(`OUR.Level.4`))
+  )
+
+sum(tt_profs$n_unique_nsf > 1)
+```
+
+
+## Descrictive statistics detailing the matching process
+
+## Percentages of AA dataset that was matched
+```{r}
+tt_profs_total <- aadata %>%
+  filter(AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor")) %>%
+  group_by(AA.PersonId) %>%
+  filter(row_number() == 1)
+
+tt_profs_matched <- aarmp %>%
+  filter(AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor")) %>%
+  group_by(AA_id) %>%
+  filter(row_number() == 1)
+
+
+unique_total <- dim(tt_profs_total)[1]
+unique_matched <- dim(tt_profs_matched)[1]
+print(paste("Total number of AA individuals: ", unique_total))
+print(paste("Number of AA individuals matched to RMP records: ", unique_matched))
+print(paste("Percentage of AA individuals matched to RMP records: ", round(unique_matched / unique_total, 4)))
+```
+
+What percentage of RMP dataset was matched?
+```{r}
+rmp_profs_total <- rmp %>%
+  group_by(RMP.ProfessorId) %>%
+  filter(row_number() == 1)
+
+tt_profs_matched <- aarmp_matched %>%
+  filter(AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor")) %>%
+  group_by(AA_id) %>%
+  filter(row_number() == 1)
+
+unique_total_all <- dim(rmp_profs_total)[1]
+unique_total <- dim(rmp_profs_total %>% filter(!is.na(OUR.uniid)))[1]
+unique_matched <- dim(tt_profs_matched)[1]
+
+print(paste("Total number of individuals in Full Dataset (All Universities): ", unique_total_all))
+print(paste("Number of RMP individuals matched to AA records: ", unique_matched))
+print(paste("Percentage of matched to RMP records for All Universities: ", round(unique_matched / unique_total_all * 100, 4)))
+print(paste("Percentage of matched to RMP records for AA Universities: ", round(unique_matched / unique_total * 100, 4)))
+```
+
+### Number of individuals in final matched dataset
+```{r}
+dim(aarmp)[1]
+```
+
