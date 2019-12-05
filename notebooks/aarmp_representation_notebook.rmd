@@ -243,7 +243,7 @@ data_meds <- data %>%
     value = med
   )
 
-data %>%
+fig <- data %>%
   ggplot(aes(x = as.factor(type), y = value, fill = type)) +
   geom_boxplot() +
   geom_label(data = data_meds, aes(label = med)) +
@@ -256,6 +256,10 @@ data %>%
     axis.title.x = element_blank(),
     axis.title.y = element_blank()
   )
+
+fig
+
+ggsave("~/Desktop/matched_unmatched_ratings.pdf", fig, height = 7, width = 7)
 ```
 
 
@@ -312,11 +316,11 @@ unmatched %>%
 
 
 ```{r}
-matched %>%
+fig <- matched %>%
   mutate(age = as.factor(OUR.age)) %>%
   group_by(age) %>%
   summarize(
-    prop.chili = sum(RMP.Chili == "['/assets/chilis/new-hot-chili.png']", na.rm = T) / n()
+    prop.chili = sum(RMP.Chili == "hot", na.rm = T) / n()
   ) %>%
   filter(as.numeric(age) < 40) %>%
   ggplot(aes(x = as.numeric(age), y = prop.chili)) +
@@ -326,6 +330,9 @@ matched %>%
     labs(x = "Scientific Age",
          y = "Proportion with Chili") +
     theme(axis.title = element_text(size = 12))
+
+fig
+ggsave("~/Desktop/age_chili_probability.pdf", fig)
 ```
 
 
@@ -368,5 +375,5 @@ fig_SI.1 <- aarmp %>%
   )
 
 fig_SI.1
-ggsave("~/Desktop/aarmp_fig_SI1.png", plot = fig_SI.1, height = 6, width = 7)
+ggsave("~/Desktop/aarmp_fig_SI1.pdf", plot = fig_SI.1, height = 6, width = 7)
 ```
