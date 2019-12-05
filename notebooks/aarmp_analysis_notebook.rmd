@@ -92,7 +92,7 @@ long_data %>%
     labs(x = "Decile ranks",
          y = "Overall Teaching Quality")
 
-ggsave("~/Desktop/aarmp_quantile_boxplots.png")
+ggsave("~/Desktop/aarmp_quantile_boxplots.pdf")
 ```
 
 ```{r}
@@ -115,7 +115,7 @@ long_data %>%
     labs(x = "Decile ranks",
          y = "Overall Teaching Quality")
 
-ggsave("~/Desktop/aarmp_disc_boxplots.png", height = 8, width = 8)
+ggsave("~/Desktop/aarmp_disc_boxplots.pdf", height = 8, width = 8)
 ```
 
 
@@ -148,7 +148,7 @@ formula_discrete <- overall ~
             # University
             uni_type +
             uni_control +
-            review_count 
+            review_count
 
 df <- ready_data %>%
   mutate(
@@ -213,10 +213,10 @@ aarmp_reg_table <- stargazer(fit_research_discrete,
           covariate.labels = new_names,
           ci = TRUE,
           single.row = T,
-          type = "html", 
-          style = "ajs")
+          type = "latex", 
+          style = "all2")
 
-write(aarmp_reg_table, "~/Desktop/aarmp_reg_table.html")
+write(aarmp_reg_table, "~/Desktop/aarmp_reg_table.txt")
 
 ```
 
@@ -226,7 +226,7 @@ ord <- names(fit_research_discrete$coefficients)[order(fit_research_discrete$coe
 summ <- summary(fit_research_discrete)
 
 
-tidymodel <- tidy(fit_research_discrete, conf.int = T)
+tidymodel <- broom::tidy(fit_research_discrete, conf.int = T)
 
 p1 <- tidymodel %>%
   filter(term != "(Intercept)") %>%
@@ -242,7 +242,7 @@ p1 <- tidymodel %>%
     term = plyr::revalue(term, new_names),
     term = reorder(term, estimate)
   ) %>%
-  ggplot(aes(x = term, y = estimate, shape = feature, color = feature)) +
+  ggplot(aes(x = term, y = estimate)) +
   geom_point() + 
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.1) +
   geom_hline(aes(yintercept = 0), linetype = "dotted", color = "black", size = 0.4) +
@@ -250,20 +250,21 @@ p1 <- tidymodel %>%
   coord_flip() +
   scale_shape_manual(name = "", values = c(19, 1)) +
   scale_color_manual(name = "", values = c("black", "blue")) +
-  theme_dakota() +
+  theme_minimal() +
   theme(
     axis.title.x = element_text(size = 11),
     axis.text.y = element_text(size = 11),
     axis.title.y = element_blank(),
-    legend.position = c(0.75, 0.06),
-    legend.text = element_text(size = 12),
+    legend.position = "none",
+    #legend.position = c(0.75, 0.06),
+    #legend.text = element_text(size = 12),
     #legend.background = element_blank(),
-    legend.box.background = element_rect(colour = "black")
+    #legend.box.background = element_rect(colour = "black")
     ) +
   labs(y = "Model coefficient")
 
 
-ggsave("~/Desktop/aarmp_regression.png", p1, width = 4, height = 8)
+ggsave("~/Desktop/aarmp_regression.pdf", p1, width = 4, height = 8)
 p1
 ```
 
@@ -350,10 +351,10 @@ aarmp_reg_table_continuous <- stargazer(fit_research_continuous,
           covariate.labels = new_names,
           ci = TRUE,
           single.row = T,
-          type = "html", 
-          style = "ajs")
+          type = "latex", 
+          style = "all2")
 
-write(aarmp_reg_table, "~/Desktop/aarmp_reg_table_continuous.html")
+write(aarmp_reg_table_continuous, "~/Desktop/aarmp_reg_table_continuous.txt")
 
 ```
 
@@ -434,7 +435,7 @@ p2 <- ggplot(data = mat_melt, aes(Var1, Var2, fill = value)) +
   scale_x_discrete(labels = labs, position = "top") +
   scale_y_discrete(position = "left", expand = c(0, 0), labels = labs)
 
-ggsave("~/Desktop/aarmp_kendall.png", p2, width = 5, height = 4)
+ggsave("~/Desktop/aarmp_kendall.pdf", p2, width = 5, height = 4)
 p2
 ```
 
@@ -470,7 +471,7 @@ p3 <- overall_mat %>%
   mutate(Overall = overall.x) %>%
   ggplot(aes(x = as.factor(Var2), y = Overall)) +
   geom_boxplot(outlier.alpha = 0.05,  alpha = 0.8, fill = "dodgerblue4") +
-  theme_dakota() +
+  theme_minimal() +
   labs(y = "Rating") +
   guides(fill = FALSE) +
   theme(
@@ -482,7 +483,7 @@ p3 <- overall_mat %>%
   coord_flip()
   
 
-ggsave("~/Desktop/aarmp_tags.png", p3, height = 5, width = 5)
+ggsave("~/Desktop/aarmp_tags.pdf", p3, height = 5, width = 5)
 p3
 ```
 
@@ -510,7 +511,7 @@ for (i in 1:length(grobs)){
 g1 <- do.call("grid.arrange", c(grobs, ncol = 1))
 
 g <- grid.arrange(p1, g1, ncol = 2)
-ggsave("~/Desktop/aarmp_figure.png", g, height = 8, width = 8)
+ggsave("~/Desktop/aarmp_figure.pdf", g, height = 8, width = 8)
 ```
 
 ```{r}
@@ -623,7 +624,6 @@ rank_box <- ready_data %>%
   geom_boxplot() +
   theme_minimal() +
   theme(
-    plot.title = element_text(size = 12, face = "bold"),
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 12, face = "bold")
   ) +
@@ -635,12 +635,12 @@ rank_box <- ready_data %>%
 
 ```{r}
 g <- grid.arrange(discipline_box, gender_box, chili_box, uni_type_box, uni_control_box, rank_box, ncol = 2)
-ggsave("~/Desktop/aarmp_boxplots_fig.png", g, width = 8, height = 8)
+ggsave("~/Desktop/aarmp_boxplots_fig.pdf", g, width = 8, height = 8)
 ```
 
 
 ```{r}
-ready_data %>%
+age_rank <- ready_data %>%
   ggplot(aes(x = rank, y = scientific_age)) +
   geom_boxplot() +
   theme_minimal() +
@@ -652,4 +652,5 @@ ready_data %>%
   labs(
     y = "Scientific Age")
 
+ggsave("~/Desktop/aarmp_age_rank_boxplots.pdf", age_rank, width = 6, height = 5)
 ```

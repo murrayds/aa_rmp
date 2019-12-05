@@ -68,6 +68,25 @@ tt_profs <- aadata %>%
 sum(tt_profs$n_unique_nsf > 1)
 ```
 
+### Number of individuals in final matched dataset
+```{r}
+dim(aarmp)[1]
+```
+
+### Total number of comments represented in the dataset
+```{r}
+sum(rmp$OUR.numcomment, na.rm = T)
+```
+
+### Total number of profiles in the RMP dataset
+```{r}
+dim(rmp)[1]
+```
+
+### Total number of instances in the matched dataset for which a gender was identified
+```{r}
+dim(aarmp %>% filter(OUR.assigned_gender %in% c("M", "F")))[1] / dim(aarmp)[1]
+```
 
 ## Descrictive statistics detailing the matching process
 
@@ -111,9 +130,3 @@ print(paste("Number of RMP individuals matched to AA records: ", unique_matched)
 print(paste("Percentage of matched to RMP records for All Universities: ", round(unique_matched / unique_total_all * 100, 4)))
 print(paste("Percentage of matched to RMP records for AA Universities: ", round(unique_matched / unique_total * 100, 4)))
 ```
-
-### Number of individuals in final matched dataset
-```{r}
-dim(aarmp)[1]
-```
-
