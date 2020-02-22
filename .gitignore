@@ -1,3 +1,11 @@
+# HTML files
+*.html
+
+
+# Snakemake log files
+*.snakemake
+
+
 # History files
 .Rhistory
 .Rapp.history
