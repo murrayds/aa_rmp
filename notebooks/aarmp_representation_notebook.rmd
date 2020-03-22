@@ -117,6 +117,33 @@ unmatched %>%
 ```
 
 
+## By race
+```{r}
+matched %>% 
+  mutate(
+    RMP.race = ifelse(is.na(RMP.RaceIsWhite), "UNK",
+                      ifelse(RMP.RaceIsWhite > 0.7, "white", "non-white"))
+  ) %>%
+  group_by(RMP.race) %>%
+  summarize(
+    prop = round(n() / dim(matched)[1] * 100, 1)
+  )
+
+
+unmatched %>% 
+  ungroup() %>%
+  mutate(
+    RMP.race = ifelse(is.na(RMP.RaceIsWhite), "UNK",
+                      ifelse(RMP.RaceIsWhite > 0.7, "white", "non-white"))
+  ) %>%
+  mutate(total = n()) %>%
+  group_by(RMP.race) %>%
+  summarize(
+    prop = round(n() / total[1] * 100, 1)
+  )
+```
+
+
 ## Age of matched vs. unmatched
 ```{r}
 matched %>%
@@ -371,7 +398,8 @@ fig_SI.1 <- aarmp %>%
   theme(
     strip.text = element_text(size = 12, face = "bold"),
     legend.position = "bottom",
-    legend.title = element_blank()
+    legend.title = element_blank(),
+    panel.grid.minor = element_blank()
   )
 
 fig_SI.1

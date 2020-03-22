@@ -12,7 +12,8 @@ taxonomy_path <- args[2]
 carnegie_path <- args[3]
 faculty_path <- args[4]
 gender_path <- args[5]
-output_path <- args[6]
+race_path <- args[6]
+output_path <- args[7]
 
 # Load the aadata
 aadata <- read.csv(aadata_path)
@@ -102,5 +103,19 @@ aadata <- merge(aadata,
 # Replace some of the blank or unknown with unknown
 aadata$OUR.Gender[is.na(aadata$OUR.Gender) | aadata$OUR.Gender == ""] <- "UNK"
 
+
+# Now we add the race information
+race <- read.csv(race_path) %>%
+  mutate(name = tolower(name)) %>%
+  select(name, White)
+
+
+aadata <- aadata %>%
+  mutate(name = tolower(AA.LastName)) %>%
+  left_join(race, by = ("name")) %>%
+  mutate(
+    AA.RaceIsWhite = White
+  ) %>%
+  select(-name, -White)
 
 write.csv(aadata, output_path)

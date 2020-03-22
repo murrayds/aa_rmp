@@ -11,7 +11,7 @@ library(stargazer)
 library(grid)
 library(gridExtra)
 # Load the data
-ready_data <- readr::read_csv("~/Desktop/AARMP_2017/processed_files/aarmp_ready_data.csv", 
+ready_data <- readr::read_csv("/Users/dakotamurray/Dropbox/AcademicAnalytics/Data/Derived/Processed/AARMP/aarmp_final.csv", 
     col_types = cols(X1 = col_skip()))
 
 # to make sure it loaded correctly, print the dimensions
@@ -123,6 +123,30 @@ Get the regression infomraiton
 ```{r}
 l <- c("None", "Moderate", "High")
 
+
+formula_basic <- overall ~ 
+            # Teacher Characteristics
+            gender +
+            scientific_age +
+            mentions_accent +
+            hotness +
+            rank +
+            race + 
+            # Course characteirstics
+            difficulty +
+            #difficulty_sd +
+            interest +
+            #interest_sd +
+            #teaches_upper +
+            mentions_ta +
+            # Disciplinary differences
+            discipline + 
+            # University
+            uni_type +
+            uni_control +
+            review_count
+  
+  
 # This is the main formula we will be using, uses categorical research indicator variables
 formula_discrete <- overall ~ 
             # Teacher Characteristics
@@ -131,6 +155,7 @@ formula_discrete <- overall ~
             mentions_accent +
             hotness +
             rank +
+            race + 
             # Course characteirstics
             difficulty +
             #difficulty_sd +
@@ -150,6 +175,7 @@ formula_discrete <- overall ~
             uni_control +
             review_count
 
+
 df <- ready_data %>%
   mutate(
     rank = factor(rank, labels = c("Assistant", "Associate", "Full")),
@@ -166,19 +192,20 @@ df <- ready_data %>%
     grantiness = factor(grantiness, levels = l)
   ) %>%
   filter(review_count >= 5)
+```
 
+
+First run the basic regression, without any of the included research indicator variables
+```{r}
+fit_research_basic = lm(formula_basic, data = df)
+summary(fit_research_basic)
+```
+
+```{r}
 fit_research_discrete = lm(formula_discrete, data = df)
-
-# used for copying numbers to text
-broom::tidy(fit_research_discrete, conf.int = T) %>%
-  mutate(estimate = round(estimate, 3),
-         conf.low = round(conf.low, 2),
-         conf.high = round(conf.high, 2)) %>%
-  select(term, estimate, conf.low, conf.high)
-
-
 summary(fit_research_discrete)
 ```
+
 
 ```{r}
 new_names = c(
@@ -188,6 +215,8 @@ new_names = c(
   hotnesshot = "Has Chili Pepper",
   rankAssociate = "Rank = Associate",
   rankFull = "Rank = Full",
+  raceUNK = "Race unknown",
+  racewhite = "Race Lilely White",
   difficulty = "Difficulty",
   interest = "Student Interest",
   mentions_taTRUE = "Mentions TA = True",
@@ -205,19 +234,68 @@ new_names = c(
   disciplineSocial = "Social Sci.",
   uni_typeR1 = "Uni. Type = R1",
   uni_controlpublic = "Uni. Control = Public",
-  review_count = "#Reviews"
+  review_count = "#Reviews",
+  `genderM:hotnesshot` = "Is Male * Has Chili",
+  `genderM:disciplineHumanities` = "Is Male * Humanities",
+  `genderM:disciplineMedical` = "Is Male * Medical",
+  `genderM:disciplineNatural` = "Is Male * Natural",
+  `genderM:disciplineSocial` = "Is Male * Social",
+  `genderM:scientific_age` = "Is Male * Scientific Age",
+  `genderM:raceUNK` = "Is Male * Race unknown",
+  `genderM:racewhite` = "Is Male * Race Likely White",
+  `genderM:mentions_accentTRUE` = "Is Male * Mentions Accent",
+  `genderM:rankAssociate` = "Is Male * Rank Associate",
+  `genderM:rankFull` = "Is Male * Rank Full"
 )
 
+# This is the main formula we will be using, uses categorical research indicator variables
+formula_interactions <- overall ~ 
+            # Teacher Characteristics
+            gender +
+            scientific_age +
+            mentions_accent +
+            hotness +
+            rank +
+            race + 
+            # Course characteirstics
+            difficulty +
+            #difficulty_sd +
+            interest +
+            #interest_sd +
+            #teaches_upper +
+            mentions_ta +
+            # Research characteristics
+            citedness +
+            all_output +
+            grantiness +
+            awardiness +
+            # Disciplinary differences
+            discipline + 
+            # University
+            uni_type +
+            uni_control +
+            review_count +
+            gender * hotness +
+            gender * discipline +
+            gender * scientific_age +
+            gender * race +
+            gender * mentions_accent +
+            gender * rank 
 
-aarmp_reg_table <- stargazer(fit_research_discrete,
+fit_research_interactions = lm(formula_interactions, data = df)
+summary(fit_research_interactions)
+stargazer(fit_research_interactions,
           covariate.labels = new_names,
           ci = TRUE,
           single.row = T,
           type = "latex", 
           style = "all2")
+```
 
-write(aarmp_reg_table, "~/Desktop/aarmp_reg_table.txt")
 
+ Anova comparing the basic model, with no indicators, to the discrete indicator model
+```{r}
+anova(fit_research_basic, fit_research_discrete)
 ```
 
 ```{r}
@@ -246,7 +324,7 @@ p1 <- tidymodel %>%
   geom_point() + 
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.1) +
   geom_hline(aes(yintercept = 0), linetype = "dotted", color = "black", size = 0.4) +
-  ylim(-0.6, 0.6) +
+  scale_y_continuous(limits = c(-0.41, 0.5), expand = c(0.01, 0.01)) +
   coord_flip() +
   scale_shape_manual(name = "", values = c(19, 1)) +
   scale_color_manual(name = "", values = c("black", "blue")) +
@@ -256,6 +334,8 @@ p1 <- tidymodel %>%
     axis.text.y = element_text(size = 11),
     axis.title.y = element_blank(),
     legend.position = "none",
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
     #legend.position = c(0.75, 0.06),
     #legend.text = element_text(size = 12),
     #legend.background = element_blank(),
@@ -322,6 +402,8 @@ broom::tidy(fit_research_continuous, conf.int = T) %>%
 summary(fit_research_continuous)
 ```
 
+
+
 ```{r}
 new_names = c(
   genderM = "Is Male",
@@ -355,7 +437,6 @@ aarmp_reg_table_continuous <- stargazer(fit_research_continuous,
           style = "all2")
 
 write(aarmp_reg_table_continuous, "~/Desktop/aarmp_reg_table_continuous.txt")
-
 ```
 
 
@@ -363,6 +444,84 @@ We can perform an ANOVA to compare the two models and find no real improvement i
 ```{r}
 anova(fit_research_discrete, fit_research_continuous)
 ```
+
+# VIF of the regression
+
+```{r}
+library(car)
+discrete <- vif(fit_research_discrete)
+discrete
+stargazer(discrete, summary = F, covariate.labels = new_names)
+
+
+continuous <- vif(fit_research_continuous, digits = 2)
+continuous
+
+stargazer(continuous, summary = F, rownames = new_names)
+```
+
+
+
+# REGRESSION WITH RESEARCH INDICATORS PCA
+```{r}
+pc <- prcomp(ready_data[, c("norm_all_pubcount", "norm_citations", "norm_awardcount", "norm_grantcount")])
+
+ready_data$research_pc <- pc$x[, 1]
+
+
+l <- c("None", "Moderate", "High")
+
+# Here is the second fomula, this time using the continuous field-noramlized indicators
+formula_pc <- overall ~ 
+            # Teacher Characteristics
+            gender +
+            scientific_age +
+            mentions_accent +
+            hotness +
+            rank +
+            # Course characteirstics
+            difficulty +
+            interest +
+            mentions_ta +
+            # Research characteristics
+            research_pc +
+            # Disciplinary differences
+            discipline + 
+            # University
+            uni_type +
+            uni_control +
+            review_count
+
+df <- ready_data %>%
+  mutate(
+    rank = factor(rank, labels = c("Assistant", "Associate", "Full")),
+    scientific_age = scale(scientific_age),
+    uni_type = ifelse(is.na(uni_type) | uni_type != "r1", "Not R1", "R1"),
+    discipline = factor(discipline, labels = c("Engineering", "Humanities", "Medical", "Natural", "Social")),
+    difficulty = scale(difficulty),
+    interest = scale(interest)
+  ) %>%
+  filter(review_count >= 5)
+
+fit_pca <- lm(formula_pc, data = df)
+
+
+# used for copying numbers to text
+broom::tidy(fit_pca, conf.int = T) %>%
+  mutate(estimate = round(estimate, 3),
+         conf.low = round(conf.low, 2),
+         conf.high = round(conf.high, 2)) %>%
+  select(term, estimate, conf.low, conf.high)
+
+
+summary(fit_pca)
+```
+
+
+```{r}
+anova(fit_research_discrete, fit_pca)
+```
+
 
 ```{r}
 ready_data_filt <- ready_data %>%
@@ -525,6 +684,7 @@ discipline_box <- ready_data %>%
   geom_boxplot() +
   theme_minimal() +
   theme(
+    panel.grid.minor = element_blank(),
     plot.title = element_text(size = 12, face = "bold"),
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 12, face = "bold"),
@@ -534,6 +694,7 @@ discipline_box <- ready_data %>%
     title = "Discipline",
     y = "Overall Teaching Quality"
     )
+
 ```
 
 
@@ -546,6 +707,7 @@ chili_box <- ready_data %>%
   geom_boxplot() +
   theme_minimal() +
   theme(
+    panel.grid.minor = element_blank(),
     plot.title = element_text(size = 12, face = "bold"),
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 12, face = "bold")
@@ -566,6 +728,7 @@ gender_box <- ready_data %>%
   geom_boxplot() +
   theme_minimal() +
   theme(
+    panel.grid.minor = element_blank(),
     plot.title = element_text(size = 12, face = "bold"),
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 12, face = "bold")
@@ -586,6 +749,7 @@ uni_type_box <- ready_data %>%
   geom_boxplot() +
   theme_minimal() +
   theme(
+    panel.grid.minor = element_blank(),
     plot.title = element_text(size = 12, face = "bold"),
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 12, face = "bold")
@@ -605,6 +769,7 @@ uni_control_box <- ready_data %>%
   geom_boxplot() +
   theme_minimal() +
   theme(
+    panel.grid.minor = element_blank(),
     plot.title = element_text(size = 12, face = "bold"),
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 12, face = "bold")
@@ -624,6 +789,8 @@ rank_box <- ready_data %>%
   geom_boxplot() +
   theme_minimal() +
   theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(size = 12, face = "bold"),
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 12, face = "bold")
   ) +
@@ -632,9 +799,33 @@ rank_box <- ready_data %>%
     y = "")
 ```
 
+```{r}
+race_box <- ready_data %>%
+  mutate(
+    race = factor(race, 
+                  levels = c("white", "non-white", "UNK"),
+                  labels = c("White", "Non-white", "Unknown"))
+  ) %>%
+  ggplot(aes(x = race, y = overall)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12, face = "bold")
+  ) +
+  labs(
+    title = "Inferred Race",
+    y = "")
+
+
+race_box
+```
+
 
 ```{r}
-g <- grid.arrange(discipline_box, gender_box, chili_box, uni_type_box, uni_control_box, rank_box, ncol = 2)
+g <- grid.arrange(discipline_box, gender_box, chili_box, race_box, uni_type_box, uni_control_box, rank_box, ncol = 2)
 ggsave("~/Desktop/aarmp_boxplots_fig.pdf", g, width = 8, height = 8)
 ```
 
@@ -652,5 +843,185 @@ age_rank <- ready_data %>%
   labs(
     y = "Scientific Age")
 
+age_rank
+
 ggsave("~/Desktop/aarmp_age_rank_boxplots.pdf", age_rank, width = 6, height = 5)
+```
+
+
+
+```{r}
+unknown_race <- ready_data %>%
+  group_by(discipline) %>%
+  summarize(
+    prop_unk = sum(race == "UNK") / n()
+  ) %>%
+  ungroup() %>%
+  mutate(
+     discipline = factor(discipline, 
+                        levels = c("Engineering", "Natural Sciences", "Medical sciences", "Social Sciences", "Humanities"),
+                        labels = c("Eng.", "Natural", "Medical", "Social", "Hum.")),
+    discipline = reorder(discipline, desc(prop_unk))
+  ) %>%
+  ggplot(aes(x = discipline, y = prop_unk)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12)
+  ) +
+  labs(
+    title = "",
+    y = "Proportion with unknown race"
+  )
+
+unknown_race
+
+ggsave("~/Desktop/aarmp_unknown_race.pdf", unknown_race)
+```
+
+
+```{r}
+demo_by_discipline <- ready_data %>%
+  group_by(discipline) %>%
+  summarize(
+    prop_women = sum(gender == "F") / n(),
+    prop_nonwhite = sum(race == "non-white") / n(),
+    prop_accent = sum(mentions_accent) / n(),
+    prop_ta = sum(mentions_ta) / n()
+  ) %>%
+  gather(key, value, prop_women, prop_nonwhite, prop_accent, prop_ta) %>%
+  mutate(
+    discipline = factor(discipline, 
+                        levels = c("Engineering", "Natural Sciences", "Medical sciences", "Social Sciences", "Humanities"),
+                        labels = c("Eng.", "Natural", "Medical", "Social", "Hum.")),
+    key = factor(key, levels = c("prop_women", "prop_nonwhite", "prop_accent", "prop_ta"),
+                  labels = c("Prop. is Female", "Prop. Is Non-white", "Prop. has mentioned accent", "Prop. has mentioned TA"))
+  ) %>%
+  ggplot(aes(x = discipline, y = value)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~key) +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12, face = "bold"),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank()
+  )
+
+demo_by_discipline
+
+ggsave("~/Desktop/aarmp_discipline_demographics.pdf", demo_by_discipline)
+```
+
+
+
+```{r}
+
+ready_data %>%
+  mutate(
+    discipline = factor(discipline, 
+                      levels = c("Engineering", "Natural Sciences", "Medical sciences", "Social Sciences", "Humanities"), labels = c("Eng.", "Natural", "Medical", "Social", "Hum."))
+  ) %>%
+  ggplot(aes(x = gender, y = overall, color = gender)) +
+  geom_boxplot() +
+  facet_wrap(~discipline, ncol = 5) +
+  theme_minimal() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12, face = "bold"),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "none",
+    legend.title = element_blank()
+  )
+
+```
+
+# REGRESSION BY DISCIPLINE
+```{r}
+# This is the main formula we will be using, uses categorical research indicator variables
+formula_nodisciplines <- overall ~ 
+            # Teacher Characteristics
+            gender +
+            scientific_age +
+            mentions_accent +
+            hotness +
+            rank +
+            race + 
+            # Course characteirstics
+            difficulty +
+            #difficulty_sd +
+            interest +
+            #interest_sd +
+            #teaches_upper +
+            mentions_ta +
+            # Research characteristics
+            citedness +
+            all_output +
+            grantiness +
+            awardiness +
+            # University
+            uni_type +
+            uni_control +
+            review_count
+
+
+new_names = c(
+  genderM = "Is Male",
+  scientific_age = "Scientific Age",
+  mentions_accentTRUE = "Mentions Accent = True",
+  hotnesshot = "Has Chili Pepper",
+  rankAssociate = "Rank = Associate",
+  rankFull = "Rank = Full",
+  raceUNK = "Race unknown",
+  racewhite = "Race Lilely White",
+  difficulty = "Difficulty",
+  interest = "Student Interest",
+  mentions_taTRUE = "Mentions TA = True",
+  citednessModerate = "Citedness = Moderate",
+  citednessHigh = "Citedness = High",
+  all_outputModerate = "Output = Moderate",
+  all_outputHigh = "Output = High",
+  grantinessModerate = "Grants Held = Moderate",
+  grantinessHigh = "Grants Held = High",
+  awardinessModerate = "Awards Won = Moderate",
+  awardinessHigh = "Awards Won = High",
+  uni_typeR1 = "Uni. Type = R1",
+  uni_controlpublic = "Uni. Control = Public",
+  review_count = "#Reviews"
+)
+
+
+fit1 <- lm(formula_nodisciplines, data = df, subset = discipline == "Engineering")
+fit2 <- lm(formula_nodisciplines, data = df, subset = discipline == "Natural")
+fit3 <- lm(formula_nodisciplines, data = df, subset = discipline == "Medical")
+fit4 <- lm(formula_nodisciplines, data = df, subset = discipline == "Social")
+fit5 <- lm(formula_nodisciplines, data = df, subset = discipline == "Humanities")
+
+aarmp_reg_table <- stargazer(fit1, fit2, fit3, fit4, fit5,
+                             column.labels = c("Engineering", "Natural", "Medical", "Social", "Humanities"),
+          covariate.labels = new_names,
+          ci = TRUE,
+          digits = 2,
+          font.size = "scriptsize",
+          column.sep.width = "1pt",
+          single.row = F,
+          type = "latex", 
+          style = "all2")
+
+
 ```
