@@ -13,7 +13,8 @@ args = commandArgs(trailingOnly=TRUE)
 rmpdata_path <- args[1]
 gender_path <- args[2]
 commentdata_path <- args[3]
-output_path <- args[4]
+race_path = args[4]
+output_path <- args[5]
 
 # Load the RMP data
 rmpdata <- read.csv(rmpdata_path)
@@ -43,6 +44,20 @@ commentdata <- read.csv(commentdata_path, stringsAsFactors=FALSE)
 
 # Merge the comment-extracted data with the RMP data
 rmpdata <- merge(rmpdata, commentdata,  all.x=TRUE)
+
+# Merge in Race data
+# Now we add the race information
+race <- read.csv(race_path) %>%
+  mutate(name = tolower(name)) %>%
+  select(name, White)
+
+rmpdata <- rmpdata %>%
+  mutate(name = tolower(RMP.Lname)) %>%
+  left_join(race, by = ("name")) %>%
+  mutate(
+    RMP.RaceIsWhite = White
+  ) %>%
+  select(-name, -White)
 
 # And write the output
 write.csv(rmpdata, output_path, row.names = FALSE)

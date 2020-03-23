@@ -80,5 +80,8 @@ aarmp <- aarmp %>% group_by(AA_id) %>% sample_n(size = 1)
 # Select onlt tenure/TT professors
 aarmp <- aarmp[aarmp$AA.RankType %in% c("Assistant Professor", "Associate Professor", "Professor"), ]
 
+# Race is set as a threshold, using 0.7
+aarmp$OUR.race <- ifelse(is.na(aarmp$RMP.RaceIsWhite), "UNK",
+                      ifelse(aarmp$RMP.RaceIsWhite > 0.7, "white", "non-white"))
 
 write.csv(aarmp, output_path, row.names = FALSE)

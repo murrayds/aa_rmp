@@ -70,6 +70,7 @@ CARNEGIE_FORMATTED = osjoin(ADDITIONAL_DIR, "carnegie_classifications_formatted.
 
 AA_RMP_INST_CROSSWALK = osjoin(ADDITIONAL_DIR, "aainst_rmpinst_crosswalk.csv")
 
+RACE_ASSIGNMENTS = osjoin(ADDITIONAL_DIR, 'race.csv')
 
 #####################
 # Validation DATA
@@ -133,7 +134,8 @@ rule enrich_aadata:
            rules.add_prefix_to_disctax_columns.output,
            rules.format_carnegie_file.output,
            FACULTY_RANKS,
-           rules.format_custom_gender_file.output
+           rules.format_custom_gender_file.output,
+           RACE_ASSIGNMENTS
     output: AADATA_ENRICHED
     shell: "Rscript scripts/enrich_aadata.R {input} {output}"
 
@@ -155,7 +157,8 @@ rule extract_features_from_comments:
 rule enrich_rmpdata:
     input: rules.add_prefix_to_rmp_columns.output,
            rules.format_custom_gender_file.output,
-           rules.extract_features_from_comments.output
+           rules.extract_features_from_comments.output,
+           RACE_ASSIGNMENTS
     output: RMP_ENRICHED
     shell: "Rscript scripts/enrich_rmpdata.R {input} {output}"
 
