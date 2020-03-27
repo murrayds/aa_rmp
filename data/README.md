@@ -1,9 +1,7 @@
-
 This folder contains anonymized data on student evaluations, demographics, and professional characteirstics for U.S. tenure and tenure track faculty represented across both RateMyProfessor.com and Academic Analytics. This data was processed using the `snakemake` workflow in the `workflow` directory. Raw, unprocessed data cannot be provided due to privacy and sensisivity concerns. 
 
 Anonymized data can be found in the file `aarmp_final.csv`. Other publicly available metadata is also provided. `race.csv` contains census-derived race likelihoods for famile names. `carnegie_classifications_formatted.csv` contains a formatted version of the publicly-available Carnegie Classification of Higher Education Institutions, which contains university-level metadata. Files in `scripts/` contain code that were used to scrape data from *RateMyProfessor.com*; readers interested in doing the same should extend this to sample their own data, following best practices to protect the sensitive data. 
 
-The anaonymized data in `aarmp_final.csv` contains the following fields:
 
 - **id**: a unique identifier for each row of the data
 - **overall**: the faculty's average teaching score, with 1 being worst and 5 being highest quality. Calculated from individual RateMyProfessor.com ratings from 2010 onwards
